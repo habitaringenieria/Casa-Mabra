@@ -426,7 +426,6 @@ async function loadSheet(tok) {
 }
 
 // ── Sheet: escribir via Apps Script (evita CORS) ─────────────────────────────
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxGAMMNE3QSxCzqo_PTJbl-7Mqm4Ex7gnC56V7fY7XrLn6Z1CDgLh3KULNXGJ3GC8cm/exec";
 
 async function appendRow(gasto) {
   const tc = gasto.tcSnapshot || blue || "";

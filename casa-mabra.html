@@ -310,7 +310,7 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 const SPREADSHEET_ID = "1Vfxx9b8N_bogNDrmKJJpCjA-oXH0XCR6RRG3gdbi2ec";
 const SHEET_NAME = "Gastos";
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzc5zREI5C9UsKM00ziqiFYUFNcaENqyI3hIBH44vVqZMeCivg7mFecAzdNIg7Xm3Nl/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx6qcG17uN8pCr8BSGqcmkbMWLtPnbOYYfBLqYyug3kQf2japneV8xDgvM1Kmz6kySS/exec";
 const ANTHROPIC_KEY = "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";
 const SA_EMAIL = "obra-gastos-mabra@habitaringenieria.iam.gserviceaccount.com";
 const SA_KEY_ID = "c98132529756401c28d2953ed25ea51333f845ea";
@@ -918,47 +918,35 @@ async function interpretarConClaude(texto) {
   document.getElementById("mic-status").textContent = "🤖 Interpretando con Claude...";
   const hoy = new Date().toISOString().slice(0,10);
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_KEY,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true"
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 500,
-        system: `Sos un asistente que interpreta gastos de construcción en Argentina. 
-Extraé la información del texto y devolvé SOLO un JSON con estos campos exactos:
-- fecha: string YYYY-MM-DD (si no se menciona usá ${hoy})
-- descripcion: string (descripción del gasto)
-- categoria: una de estas: Terreno, Proyecto, Obra, Mano de obra, Materiales, Transporte y fletes, Imprevistos, Otros
-- monto: number (solo el número, sin símbolos)
-- moneda: "ARS" o "USD"
-- formaPago: una de estas: Efectivo, Transferencia, Tarjeta de débito, Tarjeta de crédito, Cheque, Cuotas
-- notas: string (info adicional, puede ser vacío)
-Solo devolvé el JSON, sin explicaciones ni markdown.`,
-        messages: [{ role: "user", content: texto }]
-      })
+    const prompt = `Interpretá este gasto de construcción en Argentina y devolvé SOLO un JSON con: fecha (YYYY-MM-DD, si no se menciona usá ${hoy}), descripcion, categoria (una de: Terreno/Proyecto/Obra/Mano de obra/Materiales/Transporte y fletes/Imprevistos/Otros), monto (número sin símbolos), moneda (ARS o USD), formaPago (Efectivo/Transferencia/Tarjeta de débito/Tarjeta de crédito/Cheque/Cuotas), notas. Solo el JSON sin markdown.\n\nTexto: ${texto}`;
+
+    const callbackName = "cb_claude_" + Date.now();
+    const claudeData = encodeURIComponent(JSON.stringify({ claude: true, prompt, key: ANTHROPIC_KEY }));
+    const url = `${APPS_SCRIPT_URL}?data=${claudeData}&callback=${callbackName}`;
+
+    const result = await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = url;
+      window[callbackName] = (d) => { delete window[callbackName]; script.remove(); resolve(d); };
+      script.onerror = () => { delete window[callbackName]; script.remove(); reject(new Error("Error de red")); };
+      document.head.appendChild(script);
+      setTimeout(() => { delete window[callbackName]; script.remove(); reject(new Error("Timeout")); }, 30000);
     });
 
-    const data = await res.json();
-    const txt = data.content?.[0]?.text || "{}";
-    const clean = txt.replace(/```json|```/g, "").trim();
+    const clean = (result.text || "{}").replace(/```json|```/g, "").trim();
     gastoVoz = JSON.parse(clean);
 
     // Mostrar preview
     const tc = blue || 1450;
     const usd = gastoVoz.moneda === "ARS" ? (gastoVoz.monto / tc).toFixed(2) : gastoVoz.monto;
-    const ars = gastoVoz.moneda === "USD" ? (gastoVoz.monto * tc).toLocaleString("es-AR") : gastoVoz.monto.toLocaleString("es-AR");
+    const ars = gastoVoz.moneda === "USD" ? (gastoVoz.monto * tc).toLocaleString("es-AR") : Number(gastoVoz.monto).toLocaleString("es-AR");
 
     document.getElementById("mic-preview").style.display = "block";
     document.getElementById("mic-preview").innerHTML = `
       <div class="mp-row"><span class="mp-label">📅 Fecha</span><span class="mp-val">${gastoVoz.fecha}</span></div>
       <div class="mp-row"><span class="mp-label">📝 Descripción</span><span class="mp-val">${gastoVoz.descripcion}</span></div>
       <div class="mp-row"><span class="mp-label">🏷️ Categoría</span><span class="mp-val">${gastoVoz.categoria}</span></div>
-      <div class="mp-row"><span class="mp-label">💰 Monto</span><span class="mp-val">$ ${ars} ARS · U$S ${usd}</span></div>
+      <div class="mp-row"><span class="mp-label">💰 Monto</span><span class="mp-val">$ ${ars} · U$S ${usd}</span></div>
       <div class="mp-row"><span class="mp-label">💳 Forma de pago</span><span class="mp-val">${gastoVoz.formaPago}</span></div>
       ${gastoVoz.notas ? `<div class="mp-row"><span class="mp-label">📌 Notas</span><span class="mp-val">${gastoVoz.notas}</span></div>` : ""}
     `;
@@ -971,10 +959,11 @@ Solo devolvé el JSON, sin explicaciones ni markdown.`,
     document.getElementById("mic-retry").onclick = iniciarMic;
 
   } catch(e) {
-    document.getElementById("mic-status").textContent = "⚠ Error al interpretar. Intentá de nuevo.";
+    document.getElementById("mic-status").textContent = "⚠ Error: " + e.message + ". Intentá de nuevo.";
     document.getElementById("mic-retry").style.display = "block";
   }
 }
+
 
 async function confirmarGastoVoz() {
   if (!gastoVoz) return;

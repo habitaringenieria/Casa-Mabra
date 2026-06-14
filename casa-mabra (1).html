@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Casa Mabra"/>
+  <title>Casa Mabra — Gastos</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --verde: #1C2B1E; --verde-claro: #4CAF50; --verde-medio: #A8C5A0; --verde-oscuro: #6B8A6E;
+      --bg: #F7F5F0; --white: #fff; --text: #1C2B1E; --gray: #888; --border: #DDD;
+      --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom);
+    }
+    body { font-family: -apple-system, 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* HEADER */
+    #header {
+      background: var(--verde); padding: 20px 16px 0;
+      padding-top: calc(20px + var(--safe-top));
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+    .header-title .eyebrow { color: var(--verde-medio); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
+    .header-title h1 { color: #F7F5F0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    .header-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .blue-label { font-size: 10px; color: var(--verde-oscuro); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+    .blue-value { color: #F7F5F0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+    .blue-time { font-size: 10px; color: var(--verde-oscuro); }
+    .sync-status { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .sync-time { font-size: 10px; color: var(--verde-oscuro); }
+    .btn-sm { background: rgba(255,255,255,0.1); border: none; color: var(--verde-medio); border-radius: 4px; padding: 2px 7px; cursor: pointer; font-size: 13px; }
+
+    /* STATUS BAR */
+    #status-bar { padding: 6px 16px; font-size: 12px; display: none; }
+    #status-bar.show { display: block; }
+    #status-bar.ok { background: #1E3A20; color: var(--verde-medio); }
+    #status-bar.err { background: #3D1C1C; color: #EF9A9A; }
+
+    /* NAV */
+    .nav { display: flex; }
+    .nav-btn { flex: 1; padding: 10px 0; border: none; background: none; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--verde-oscuro); border-bottom: 2px solid transparent; }
+    .nav-btn.active { color: #F7F5F0; border-bottom-color: var(--verde-claro); }
+
+    /* CONTENT */
+    #content { max-width: 680px; margin: 0 auto; padding: 0 16px; padding-bottom: calc(90px + var(--safe-bottom)); }
+
+    /* TOTALES */
+    .totales-card { background: var(--verde); border-radius: 14px; padding: 18px 20px; margin: 20px 0; }
+    .totales-label { color: var(--verde-medio); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
+    .totales-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .totales-item .tl { color: var(--verde-oscuro); font-size: 11px; margin-bottom: 2px; }
+    .totales-item .tv { color: #F7F5F0; font-size: 22px; font-weight: 800; }
+    .totales-footer { margin-top: 10px; font-size: 12px; color: var(--verde-oscuro); }
+
+    /* FILTROS */
+    .filtros { overflow-x: auto; white-space: nowrap; padding-bottom: 4px; margin-bottom: 14px; }
+    .filtros::-webkit-scrollbar { display: none; }
+    .filtro-btn { display: inline-block; margin-right: 6px; padding: 5px 12px; border-radius: 20px; border: none; cursor: pointer; font-size: 12px; background: #E0DDD7; color: #555; font-weight: 400; }
+    .filtro-btn.active { background: var(--verde); color: #F7F5F0; font-weight: 600; }
+
+    /* GASTO CARD */
+    .gasto-card { background: var(--white); border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden; margin-bottom: 10px; }
+    .gasto-main { padding: 14px 16px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+    .gasto-info { flex: 1; min-width: 0; }
+    .gasto-desc { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gasto-meta { font-size: 12px; color: var(--gray); margin-top: 2px; }
+    .gasto-meta .cat { color: var(--verde-claro); font-weight: 600; }
+    .gasto-montos { text-align: right; flex-shrink: 0; }
+    .gasto-ars { font-weight: 700; font-size: 15px; }
+    .gasto-usd { font-size: 12px; color: var(--verde-oscuro); }
+    .gasto-detail { border-top: 1px solid #F0EDE8; padding: 12px 16px; background: #FAFAF8; display: none; }
+    .gasto-detail.open { display: block; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; margin-bottom: 12px; }
+    .detail-grid .full { grid-column: 1/-1; }
+    .dlabel { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #AAA; font-weight: 600; margin-bottom: 2px; }
+    .detail-actions { display: flex; gap: 8px; }
+    .btn-edit { flex: 1; padding: 9px; background: var(--verde); color: #F7F5F0; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 600; }
+    .btn-del { padding: 9px 16px; background: #FEE2E2; color: #B91C1C; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 600; }
+
+    /* EMPTY */
+    .empty { text-align: center; padding: 60px 0; color: #AAA; }
+    .empty .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty .title { font-size: 15px; font-weight: 600; color: #555; }
+    .empty .sub { font-size: 13px; margin-top: 4px; }
+
+    /* RESUMEN */
+    .resumen-total { background: var(--verde); border-radius: 12px; padding: 16px 20px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+    .resumen-total .rl { font-weight: 700; color: var(--verde-medio); font-size: 13px; text-transform: uppercase; }
+    .resumen-total .rv-ars { font-weight: 800; color: #F7F5F0; font-size: 18px; }
+    .resumen-total .rv-usd { color: var(--verde-medio); font-size: 13px; }
+    .cat-card { background: var(--white); border-radius: 12px; padding: 14px 20px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .cat-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .cat-nombre { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+    .cat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .cat-count { color: #999; font-size: 12px; margin-top: 2px; }
+    .cat-montos { text-align: right; }
+    .cat-ars { font-weight: 700; font-size: 15px; }
+    .cat-usd { color: var(--verde-oscuro); font-size: 12px; }
+    .barra { height: 6px; background: #EEE; border-radius: 3px; margin-bottom: 4px; }
+    .barra-fill { height: 6px; border-radius: 3px; transition: width 0.4s; }
+    .pct { font-size: 11px; color: #AAA; }
+
+    /* GRÁFICO */
+    .chart-card { background: var(--white); border-radius: 14px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-bottom: 16px; }
+    .chart-legend { display: grid; gap: 8px; }
+    .legend-item { display: flex; align-items: center; gap: 12px; background: var(--white); border-radius: 10px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+    .legend-name { flex: 1; font-weight: 600; font-size: 14px; }
+    .legend-usd { font-weight: 700; font-size: 14px; }
+    .legend-ars { font-size: 11px; color: var(--gray); }
+    .chart-total { margin-top: 12px; background: var(--verde); border-radius: 10px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; }
+    .chart-total-label { color: var(--verde-medio); font-weight: 700; font-size: 13px; }
+    .chart-total-usd { color: #F7F5F0; font-weight: 800; font-size: 16px; }
+    .chart-total-ars { color: var(--verde-oscuro); font-size: 12px; }
+
+    /* FORMULARIO */
+    #form-view { margin-top: 24px; }
+    .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+    .form-header h2 { font-size: 18px; font-weight: 700; }
+    .btn-close { background: none; border: none; color: #AAA; font-size: 22px; cursor: pointer; line-height: 1; }
+    .form-group { margin-bottom: 14px; }
+    .form-label { display: block; font-size: 11px; font-weight: 600; color: #777; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px; color: var(--text); background: var(--white); outline: none; -webkit-appearance: none; }
+    .form-row { display: flex; gap: 8px; }
+    .form-select-moneda { width: 90px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px; background: var(--white); -webkit-appearance: none; }
+    .conversion-preview { margin-top: 6px; padding: 8px 12px; background: #E8F5E9; border-radius: 8px; font-size: 13px; color: #2E7D32; }
+    .btn-guardar { margin-top: 20px; width: 100%; padding: 14px; background: var(--verde); color: #F7F5F0; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .btn-guardar:disabled { opacity: 0.4; }
+    .form-footer { text-align: center; font-size: 12px; color: var(--gray); margin-top: 8px; }
+    .warn-banner { margin-bottom: 16px; padding: 10px 14px; background: #FFF8E1; border-radius: 8px; font-size: 13px; color: #7A5F00; border: 1px solid #FFE082; }
+
+    /* FAB */
+    #fab { position: fixed; bottom: calc(24px + var(--safe-bottom)); right: 24px; width: 56px; height: 56px; border-radius: 50%; background: var(--verde-claro); color: #fff; border: none; font-size: 28px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; z-index: 50; }
+    #fab.hidden { display: none; }
+
+    /* SECCIONES */
+    .section { display: none; }
+    .section.active { display: block; }
+    h2.section-title { font-size: 18px; font-weight: 700; margin: 20px 0 4px; }
+    p.section-sub { font-size: 12px; color: var(--gray); margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="header-top">
+    <div class="header-title">
+      <div class="eyebrow">Casa Mabra</div>
+      <h1>Control de Gastos</h1>
+    </div>
+    <div class="header-right">
+      <div>
+        <div class="blue-label">Dólar Blue</div>
+        <div class="blue-value">
+          <span id="blue-val">...</span>
+          <button class="btn-sm" onclick="fetchBlue()">↺</button>
+        </div>
+        <div class="blue-time" id="blue-time"></div>
+      </div>
+      <div>
+        <div class="sync-status">
+          <span id="sync-dot" style="color:#6B8A6E">⏳ Conectando...</span>
+          <button class="btn-sm" id="sync-btn" onclick="syncNow()" style="display:none">↺</button>
+        </div>
+        <div class="sync-time" id="sync-time"></div>
+      </div>
+    </div>
+  </div>
+  <div id="status-bar"></div>
+  <div class="nav">
+    <button class="nav-btn active" onclick="setVista('lista')">Gastos</button>
+    <button class="nav-btn" onclick="setVista('resumen')">Resumen</button>
+    <button class="nav-btn" onclick="setVista('grafico')">Gráfico</button>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div id="content">
+  <!-- LISTA -->
+  <div id="vista-lista" class="section active">
+    <div class="totales-card">
+      <div class="totales-label">Total acumulado — Casa Mabra</div>
+      <div class="totales-grid">
+        <div class="totales-item"><div class="tl">En pesos</div><div class="tv" id="total-ars">$ 0</div></div>
+        <div class="totales-item"><div class="tl">En dólares blue</div><div class="tv" id="total-usd">U$S 0,00</div></div>
+      </div>
+      <div class="totales-footer" id="totales-footer"></div>
+    </div>
+    <div class="filtros" id="filtros"></div>
+    <div id="lista-gastos"></div>
+  </div>
+
+  <!-- RESUMEN -->
+  <div id="vista-resumen" class="section">
+    <h2 class="section-title">Resumen por categoría</h2>
+    <p class="section-sub" id="resumen-sub"></p>
+    <div id="resumen-content"></div>
+  </div>
+
+  <!-- GRÁFICO -->
+  <div id="vista-grafico" class="section">
+    <h2 class="section-title">Distribución por categoría</h2>
+    <p class="section-sub" id="grafico-sub"></p>
+    <div class="chart-card">
+      <canvas id="pie-chart" height="260"></canvas>
+    </div>
+    <div class="chart-legend" id="chart-legend"></div>
+    <div class="chart-total" id="chart-total"></div>
+  </div>
+
+  <!-- FORMULARIO -->
+  <div id="vista-form" class="section">
+    <div id="form-view">
+      <div class="form-header">
+        <h2 id="form-titulo">Nuevo gasto</h2>
+        <button class="btn-close" onclick="cerrarForm()">✕</button>
+      </div>
+      <div id="form-warn" class="warn-banner" style="display:none">
+        ⚠ Conectando al Sheet, el gasto se guardará igual localmente.
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha</label>
+        <input type="date" id="f-fecha" class="form-input"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripción *</label>
+        <input type="text" id="f-desc" class="form-input" placeholder="Ej: Ladrillos 18×18 — 500 unidades"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Detalle</label>
+        <input type="text" id="f-detalle" class="form-input" placeholder="Observación adicional"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Categoría</label>
+        <select id="f-cat" class="form-input"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Moneda y monto *</label>
+        <div class="form-row">
+          <select id="f-moneda" class="form-input form-select-moneda" onchange="updatePreview()">
+            <option value="ARS">$ ARS</option>
+            <option value="USD">U$S</option>
+          </select>
+          <input type="number" id="f-monto" class="form-input" style="flex:1" placeholder="0,00" min="0" step="0.01" oninput="updatePreview()"/>
+        </div>
+        <div class="conversion-preview" id="preview" style="display:none"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Forma de pago</label>
+        <select id="f-pago" class="form-input"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notas</label>
+        <textarea id="f-notas" class="form-input" rows="2" placeholder="Observaciones opcionales..." style="resize:vertical"></textarea>
+      </div>
+      <button class="btn-guardar" id="btn-guardar" onclick="guardarGasto()">Registrar gasto</button>
+      <p class="form-footer" id="form-footer"></p>
+    </div>
+  </div>
+</div>
+
+<!-- FAB -->
+<button id="fab" onclick="abrirForm()">+</button>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const SPREADSHEET_ID = "1Vfxx9b8N_bogNDrmKJJpCjA-oXH0XCR6RRG3gdbi2ec";
+const SHEET_NAME = "Gastos";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzb0FU6aMudMW1RE7zA8CqjzECWP68gAH3K-MqVFgrL_XRaZrder3Kl9nX0-OSWwhN6/exec";
+const SA_EMAIL = "obra-gastos-mabra@habitaringenieria.iam.gserviceaccount.com";
+const SA_KEY_ID = "c98132529756401c28d2953ed25ea51333f845ea";
+const SA_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCndGMmzKAYvBz9
+SnjBTr8OYVDobBWCHFAjfjPGKvEwS7tI8Skw5Z4nkQo2Er076cO1sDv9kSK+rFzj
+6ABNIHbY8Sd5CSF9YJMYiRAzsPBuQGEVS+W1uNRH637LpgAQh06elJkjgkBLBZN4
+AkdIr3JvjfmWbMLqqx308BDxVCXP5dXs+1Yr71d5Lg4EAgo+ThpzCF5Wf99ZVKV4
+/aANRnLeTg0aZLgevy7dKXMjCc7xvaiPRg3XDgNLFiGws7viWIT4CZjjYXYaoDMy
+Y1l4bzruVbEyWgbAPLziu5dV76fmLtjLTzkeekNSVgDS18/PBa8sXTwbJTwpy6kk
+PKk4iYcnAgMBAAECggEAEFqhDlqArjm8+Q3LYlGu/hgJ/1EC/ryGJRk/tDRgbs+O
+oG6RD8n1GrcjEKne2lmXuAhYq4h/pLCPt+BiGyY3BTP0H3GBWE3Uv9ou/2Vh7dqS
+wLIzYn6FGOsKbJgvPG4CgyFPHXUsk0cdomRSkuozmmp6vDKuDJ4epFvHw9HsiXOn
+6HMupy73Oa8SQVqrfTVvdpOWtVq8iH7Kmm7gc+CyodnYxGnsLD8C0bNr8bXbac6m
+58COGuAWOcQ+uFVTamU1hUNhgAw00yiyVZwXnSIW74872D0Lit4O5xRgQjU09ts1
+4K5NbRsMocLRL4fMhefHwuvuPA5BFMq8jIukMtSCzQKBgQDYQYJ/8SW01Tqaptve
+e3WbNc0EuAsYJ6OpwID1AT8XNrMao7gWkBO5h8INPCHU+0JS/wF9TwzpsjI1Xmtf
+G51S7jHHf+pN/FmtXpzjI+Q0j1BCT6VuFHwV7fne+TwIz9uyOKi4ln7QurThAE56
+x2Gbi6a+WVPaMzmG7F7BdWUQQwKBgQDGOttx7D+/7qIeks7S8/HjXvJ24QNfF8zl
+rGODwodJoli1I1Ax4RiRM/T2EMA27nW0x6pDKPvqljYyfihLgkBojigZ4r9L0iP8
+WIH/podNa273/ve4SrxxEySorhOghkoAhSoMKfh1VvTcIkA3OVhLwVzU/adXKYOf
+BGc5jpkhTQKBgE983NPcNojea3kW5fBEHvla8C3Q3DsXrt+hY4Uq3R7SO0kKborU
+kHt8fAZTWPgpFrrdApYlrVBk8HGPcBX4V355EREMYnohzHCeOzp+Ic5z8wM8tUjd
+/LIu085ye++dP1ql2tZmctyUFBI0A6S7jpQW48ZJnTmx5G5EiZvAY9JzAoGBAKlX
+SnRN8D/UaiZYH9tSjkdAqz0nCCxKNr3VwMWkftJGoCVN34pc0xHoItG6iZnjqCYh
+k6//6QUEAZSs9VtcEA3Bszw52lW5VQiTy6pL5rYamxe8dn63SbgHNH/tBdNSJRHA
+sKTnjdsfx9nuYJFMqcM9kkJZ1oS9cDV+G3it+t7ZAoGAX4LKtD9TnGuXMRdCd8JO
+/KYdr3WDAkxIouO201RJIxLMF3G2hNYiIZpP2PkSl+6FNsLAnvbBXAAXQJpZk3Ge
++W1tXH2ngVSUffzc16Uyg6Ts0Y86osxA2TqTuGX+Xg/ToWRfOzsU7yjXwsuQwE6u
+S4i4sY99koHYP3yZ0D9iyjU=
+-----END PRIVATE KEY-----`;
+
+const CATEGORIAS = ["Terreno","Proyecto","Obra","Mano de obra","Materiales","Transporte y fletes","Imprevistos","Otros"];
+const FORMAS_PAGO = ["Efectivo","Transferencia","Tarjeta de débito","Tarjeta de crédito","Cheque","Cuotas"];
+const COLORES = ["#4CAF50","#2196F3","#FF9800","#E91E63","#9C27B0","#00BCD4","#FF5722","#8BC34A"];
+
+// ── Estado ────────────────────────────────────────────────────────────────────
+let gastos = [];
+let blue = null;
+let saToken = null;
+let editId = null;
+let filtroCat = "Todas";
+let vistaActual = "lista";
+let pieChartInstance = null;
+let syncing = false;
+
+// ── Formateo ──────────────────────────────────────────────────────────────────
+const fARS = n => n == null ? "—" : "$ " + Math.round(n).toLocaleString("es-AR");
+const fUSD = n => n == null ? "—" : "U$S " + Number(n).toLocaleString("es-AR", {minimumFractionDigits:2, maximumFractionDigits:2});
+
+function parseMonto(v) {
+  // El Sheet guarda en formato inglés: $1,500,000 o $1,150 o $50,842
+  // Las comas son separadores de miles, NO decimales
+  if (!v) return 0;
+  const s = String(v).replace(/[$\s]/g,"").replace(/,/g,"").trim();
+  return parseFloat(s) || 0;
+}
+function parsePesos(v) { return parseMonto(v); }
+function parseDolar(v) { return parseMonto(v); }
+function fechaToISO(v) {
+  if (!v) return new Date().toISOString().slice(0,10);
+  const m = String(v).match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+  if (m) {
+    const d=m[1].padStart(2,"0"), mo=m[2].padStart(2,"0");
+    let y=m[3]||"2026"; if(y.length===2) y="20"+y;
+    return `${y}-${mo}-${d}`;
+  }
+  return v;
+}
+function isoToFecha(iso) {
+  if (!iso) return "";
+  const [y,mo,d] = iso.split("-");
+  return `${d}/${mo}/${y}`;
+}
+function mapCat(d) {
+  const s = (d||"").toLowerCase();
+  if (s.includes("terreno")) return "Terreno";
+  if (s.includes("proyecto")) return "Proyecto";
+  if (s.includes("obra")) return "Obra";
+  return "Otros";
+}
+function getUSD(g) {
+  if (g.moneda === "USD") return Number(g.monto);
+  const tc = blue || g.tcSnapshot;
+  return tc ? Number(g.monto) / tc : null;
+}
+function getARS(g) {
+  if (g.moneda === "ARS") return Number(g.monto);
+  const tc = blue || g.tcSnapshot;
+  return tc ? Number(g.monto) * tc : null;
+}
+
+// ── Service Account JWT ───────────────────────────────────────────────────────
+async function getToken() {
+  const now = Math.floor(Date.now()/1000);
+  const hdr = {alg:"RS256",typ:"JWT",kid:SA_KEY_ID};
+  const pay = {iss:SA_EMAIL,scope:"https://www.googleapis.com/auth/spreadsheets",aud:"https://oauth2.googleapis.com/token",exp:now+3600,iat:now};
+  const b64 = o => btoa(JSON.stringify(o)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  const si = `${b64(hdr)}.${b64(pay)}`;
+  const pem = SA_PRIVATE_KEY.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\n/g,"");
+  const bin = Uint8Array.from(atob(pem), c=>c.charCodeAt(0));
+  const key = await crypto.subtle.importKey("pkcs8", bin.buffer, {name:"RSASSA-PKCS1-v1_5",hash:"SHA-256"}, false, ["sign"]);
+  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(si));
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  const jwt = `${si}.${sigB64}`;
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body:`grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`
+  });
+  const d = await res.json();
+  if (!d.access_token) throw new Error(d.error_description||"No token");
+  return d.access_token;
+}
+
+// ── Dólar Blue ────────────────────────────────────────────────────────────────
+async function fetchBlue() {
+  document.getElementById("blue-val").textContent = "...";
+  try {
+    const r = await fetch("https://api.bluelytics.com.ar/v2/latest");
+    const d = await r.json();
+    blue = Math.round((d.blue.value_buy + d.blue.value_sell) / 2);
+    document.getElementById("blue-val").textContent = "$ " + blue.toLocaleString("es-AR");
+    document.getElementById("blue-time").textContent = new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
+    renderVista();
+  } catch {
+    document.getElementById("blue-val").textContent = "Sin conexión";
+  }
+}
+
+// ── Sheet: leer ───────────────────────────────────────────────────────────────
+async function loadSheet(tok) {
+  const range = encodeURIComponent(`${SHEET_NAME}!A2:I100`);
+  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}`,
+    {headers:{Authorization:`Bearer ${tok}`}});
+  const data = await res.json();
+  const rows = (data.values||[]).filter(r=>r[1]).map((r,i)=>{
+    const arsVal = parsePesos(r[4]);
+    const usdVal = parseDolar(r[6]);
+    const tc = parseDolar(r[5]);
+    const moneda = arsVal > 0 ? "ARS" : "USD";
+    return {
+      id: Date.now()+i,
+      fecha: fechaToISO(r[0]),
+      descripcion: r[1]||"",
+      detalle: r[2]||"",
+      formaPago: r[3]||"Efectivo",
+      categoria: mapCat(r[2]),
+      moneda, monto: moneda==="ARS"?arsVal:usdVal,
+      tcSnapshot: tc||null, notas: r[8]||""
+    };
+  });
+  if (rows.length > 0) gastos = rows;
+}
+
+// ── Sheet: escribir via Apps Script (evita CORS) ─────────────────────────────
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxGAMMNE3QSxCzqo_PTJbl-7Mqm4Ex7gnC56V7fY7XrLn6Z1CDgLh3KULNXGJ3GC8cm/exec";
+
+async function appendRow(gasto) {
+  const tc = gasto.tcSnapshot || blue || "";
+  const ars = gasto.moneda==="ARS" ? Number(gasto.monto) : (tc ? Number(gasto.monto)*tc : "");
+  const usd = tc ? (gasto.moneda==="USD" ? Number(gasto.monto) : Number(gasto.monto)/tc) : "";
+  const acumUSD = gastos.reduce((a,g)=>a+(getUSD(g)||0),0);
+  const row = [
+    isoToFecha(gasto.fecha),
+    gasto.descripcion,
+    gasto.categoria,
+    gasto.formaPago,
+    ars ? Math.round(Number(ars)) : "",
+    tc ? Number(tc) : "",
+    usd ? Number(usd).toFixed(2) : "",
+    acumUSD ? Number(acumUSD).toFixed(2) : "",
+    gasto.notas||""
+  ];
+  // Usar Apps Script como proxy para evitar CORS
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({row})
+  });
+  // no-cors no devuelve body, asumimos OK si no tira excepción
+}
+
+// ── Sync ──────────────────────────────────────────────────────────────────────
+async function syncNow() {
+  if (syncing) return;
+  syncing = true;
+  document.getElementById("sync-dot").textContent = "🔄 Actualizando...";
+  document.getElementById("sync-btn").style.display = "none";
+  try {
+    saToken = await getToken();
+    await loadSheet(saToken);
+    document.getElementById("sync-dot").style.color = "#4CAF50";
+    document.getElementById("sync-dot").textContent = "✓ Sheet sincronizado";
+    document.getElementById("sync-time").textContent = "Última sync: " + new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
+    document.getElementById("sync-btn").style.display = "";
+    renderVista();
+  } catch(e) {
+    document.getElementById("sync-dot").style.color = "#EF9A9A";
+    document.getElementById("sync-dot").textContent = "⚠ Sin conexión al Sheet";
+  } finally { syncing = false; }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  // Poblar selects
+  const catSel = document.getElementById("f-cat");
+  CATEGORIAS.forEach(c => { const o=document.createElement("option"); o.value=c; o.textContent=c; catSel.appendChild(o); });
+  catSel.value = "Obra";
+  const pagoSel = document.getElementById("f-pago");
+  FORMAS_PAGO.forEach(p => { const o=document.createElement("option"); o.value=p; o.textContent=p; pagoSel.appendChild(o); });
+  document.getElementById("f-fecha").value = new Date().toISOString().slice(0,10);
+
+  // Cargar datos fallback primero
+  gastos = GASTOS_FALLBACK.map((g,i)=>({...g,id:i+1,categoria:mapCat(g.detalle)}));
+  renderVista();
+
+  // Conectar Google y blue en paralelo
+  fetchBlue();
+  await syncNow();
+
+  // Polling cada 5 minutos
+  setInterval(syncNow, 5*60*1000);
+}
+
+// ── Status flash ──────────────────────────────────────────────────────────────
+function flash(msg, isErr, duration=4000) {
+  const el = document.getElementById("status-bar");
+  el.textContent = msg;
+  el.className = "show " + (isErr?"err":"ok");
+  if (duration>0) setTimeout(()=>{ el.className=""; }, duration);
+}
+
+// ── Vistas ────────────────────────────────────────────────────────────────────
+function setVista(v) {
+  vistaActual = v;
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach((b,i)=>{ b.classList.toggle("active", ["lista","resumen","grafico"][i]===v); });
+  document.getElementById("vista-"+v).classList.add("active");
+  document.getElementById("fab").classList.toggle("hidden", v==="form");
+  renderVista();
+}
+
+function renderVista() {
+  if (vistaActual==="lista") renderLista();
+  else if (vistaActual==="resumen") renderResumen();
+  else if (vistaActual==="grafico") renderGrafico();
+}
+
+// ── Totales ───────────────────────────────────────────────────────────────────
+function calcTotales() {
+  let ars=0, usd=0;
+  gastos.forEach(g=>{ ars+=getARS(g)||0; usd+=getUSD(g)||0; });
+  return {ars,usd};
+}
+function calcPorCat() {
+  const map={};
+  CATEGORIAS.forEach(c=>(map[c]={ars:0,usd:0,count:0}));
+  gastos.forEach(g=>{
+    const c=g.categoria||"Otros";
+    if(!map[c]) map[c]={ars:0,usd:0,count:0};
+    map[c].ars+=getARS(g)||0; map[c].usd+=getUSD(g)||0; map[c].count++;
+  });
+  return map;
+}
+
+// ── Render Lista ──────────────────────────────────────────────────────────────
+function renderLista() {
+  const tot = calcTotales();
+  document.getElementById("total-ars").textContent = fARS(tot.ars);
+  document.getElementById("total-usd").textContent = fUSD(tot.usd);
+  document.getElementById("totales-footer").textContent =
+    `${gastos.length} gastos${blue ? " · Blue: $ "+blue.toLocaleString("es-AR") : ""}`;
+
+  // Filtros
+  const cats = ["Todas",...CATEGORIAS.filter(c=>gastos.some(g=>g.categoria===c))];
+  document.getElementById("filtros").innerHTML = cats.map(c=>
+    `<button class="filtro-btn${filtroCat===c?" active":""}" onclick="setFiltro('${c}')">${c}</button>`
+  ).join("");
+
+  // Lista
+  const filtrados = filtroCat==="Todas" ? gastos : gastos.filter(g=>g.categoria===filtroCat);
+  const el = document.getElementById("lista-gastos");
+  if (filtrados.length===0) {
+    el.innerHTML=`<div class="empty"><div class="icon">🏗️</div><div class="title">No hay gastos todavía</div><div class="sub">Tocá el + para cargar el primero</div></div>`;
+    return;
+  }
+  el.innerHTML = [...filtrados].reverse().map(g=>{
+    const arsV=getARS(g), usdV=getUSD(g);
+    return `<div class="gasto-card">
+      <div class="gasto-main" onclick="toggleGasto(${g.id})">
+        <div class="gasto-info">
+          <div class="gasto-desc">${g.descripcion}</div>
+          <div class="gasto-meta">${g.fecha} · <span class="cat">${g.categoria}</span> · ${g.formaPago}</div>
+        </div>
+        <div class="gasto-montos">
+          ${arsV!=null?`<div class="gasto-ars">${fARS(arsV)}</div>`:""}
+          ${usdV!=null?`<div class="gasto-usd">${fUSD(usdV)}</div>`:""}
+        </div>
+      </div>
+      <div class="gasto-detail" id="det-${g.id}">
+        <div class="detail-grid">
+          <div><div class="dlabel">Monto original</div>${g.moneda==="ARS"?fARS(g.monto):fUSD(g.monto)}</div>
+          ${g.tcSnapshot?`<div><div class="dlabel">Blue al cargar</div>$ ${Number(g.tcSnapshot).toLocaleString("es-AR")}</div>`:""}
+          ${g.detalle?`<div class="full"><div class="dlabel">Detalle</div>${g.detalle}</div>`:""}
+          ${g.notas?`<div class="full"><div class="dlabel">Notas</div>${g.notas}</div>`:""}
+        </div>
+        <div class="detail-actions">
+          <button class="btn-edit" onclick="editarGasto(${g.id})">Editar</button>
+          <button class="btn-del" onclick="eliminarGasto(${g.id})">Eliminar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function toggleGasto(id) {
+  const el = document.getElementById("det-"+id);
+  if (el) el.classList.toggle("open");
+}
+function setFiltro(c) { filtroCat=c; renderLista(); }
+
+// ── Render Resumen ────────────────────────────────────────────────────────────
+function renderResumen() {
+  const tot = calcTotales();
+  const cat = calcPorCat();
+  document.getElementById("resumen-sub").textContent = blue ? `Blue actual: $ ${blue.toLocaleString("es-AR")}` : "";
+  const activeCats = CATEGORIAS.filter(c=>cat[c]?.count>0);
+  document.getElementById("resumen-content").innerHTML =
+    `<div class="resumen-total">
+      <div class="rl">Total general</div>
+      <div style="text-align:right"><div class="rv-ars">${fARS(tot.ars)}</div><div class="rv-usd">${fUSD(tot.usd)}</div></div>
+    </div>` +
+    activeCats.map((c,i)=>{
+      const d=cat[c], pct=tot.ars>0?(d.ars/tot.ars)*100:0;
+      return `<div class="cat-card">
+        <div class="cat-header">
+          <div><div class="cat-nombre"><div class="cat-dot" style="background:${COLORES[i%COLORES.length]}"></div>${c}</div>
+          <div class="cat-count">${d.count} gasto${d.count!==1?"s":""}</div></div>
+          <div class="cat-montos"><div class="cat-ars">${fARS(d.ars)}</div><div class="cat-usd">${fUSD(d.usd)}</div></div>
+        </div>
+        <div class="barra"><div class="barra-fill" style="background:${COLORES[i%COLORES.length]};width:${pct}%"></div></div>
+        <div class="pct">${pct.toFixed(1)}% del total</div>
+      </div>`;
+    }).join("");
+}
+
+// ── Render Gráfico ────────────────────────────────────────────────────────────
+function renderGrafico() {
+  const tot = calcTotales();
+  const cat = calcPorCat();
+  document.getElementById("grafico-sub").textContent = blue ? `En dólares blue · TC: $ ${blue.toLocaleString("es-AR")}` : "En dólares blue";
+  const activeCats = CATEGORIAS.filter(c=>cat[c]?.count>0&&cat[c].usd>0);
+  const vals = activeCats.map(c=>cat[c].usd);
+  const cols = activeCats.map((_,i)=>COLORES[i%COLORES.length]);
+
+  if (pieChartInstance) { pieChartInstance.destroy(); pieChartInstance=null; }
+  const ctx = document.getElementById("pie-chart").getContext("2d");
+  pieChartInstance = new Chart(ctx, {
+    type:"doughnut",
+    data:{ labels:activeCats, datasets:[{data:vals,backgroundColor:cols,borderWidth:2,borderColor:"#fff"}] },
+    options:{ responsive:true, plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${fUSD(ctx.raw)}`}}
+    }}
+  });
+
+  document.getElementById("chart-legend").innerHTML = activeCats.map((c,i)=>
+    `<div class="legend-item">
+      <div class="legend-dot" style="background:${COLORES[i%COLORES.length]}"></div>
+      <div class="legend-name">${c}</div>
+      <div style="text-align:right"><div class="legend-usd">${fUSD(cat[c].usd)}</div><div class="legend-ars">${fARS(cat[c].ars)}</div></div>
+    </div>`
+  ).join("");
+
+  document.getElementById("chart-total").innerHTML =
+    `<span class="chart-total-label">TOTAL</span>
+     <div style="text-align:right"><div class="chart-total-usd">${fUSD(tot.usd)}</div><div class="chart-total-ars">${fARS(tot.ars)}</div></div>`;
+}
+
+// ── Formulario ────────────────────────────────────────────────────────────────
+function abrirForm(g=null) {
+  editId = g ? g.id : null;
+  document.getElementById("form-titulo").textContent = g ? "Editar gasto" : "Nuevo gasto";
+  document.getElementById("btn-guardar").textContent = g ? "Guardar cambios" : "Registrar gasto";
+  document.getElementById("f-fecha").value = g ? g.fecha : new Date().toISOString().slice(0,10);
+  document.getElementById("f-desc").value = g ? g.descripcion : "";
+  document.getElementById("f-detalle").value = g ? g.detalle : "";
+  document.getElementById("f-cat").value = g ? g.categoria : "Obra";
+  document.getElementById("f-moneda").value = g ? g.moneda : "ARS";
+  document.getElementById("f-monto").value = g ? g.monto : "";
+  document.getElementById("f-pago").value = g ? g.formaPago : "Efectivo";
+  document.getElementById("f-notas").value = g ? g.notas : "";
+  document.getElementById("preview").style.display="none";
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById("vista-form").classList.add("active");
+  document.getElementById("fab").classList.add("hidden");
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+}
+
+function cerrarForm() {
+  editId = null;
+  setVista("lista");
+}
+
+function updatePreview() {
+  const monto = parseFloat(document.getElementById("f-monto").value);
+  const moneda = document.getElementById("f-moneda").value;
+  const prev = document.getElementById("preview");
+  if (monto > 0 && blue) {
+    prev.style.display="block";
+    prev.textContent = moneda==="ARS"
+      ? `💱 ≈ ${fUSD(monto/blue)} al blue de hoy`
+      : `💱 ≈ ${fARS(monto*blue)} al blue de hoy`;
+  } else { prev.style.display="none"; }
+}
+
+async function guardarGasto() {
+  const desc = document.getElementById("f-desc").value.trim();
+  const monto = parseFloat(document.getElementById("f-monto").value);
+  if (!desc || !monto || monto<=0) return;
+
+  const gasto = {
+    id: editId || Date.now(),
+    fecha: document.getElementById("f-fecha").value,
+    descripcion: desc,
+    detalle: document.getElementById("f-detalle").value,
+    categoria: document.getElementById("f-cat").value,
+    moneda: document.getElementById("f-moneda").value,
+    monto, formaPago: document.getElementById("f-pago").value,
+    notas: document.getElementById("f-notas").value,
+    tcSnapshot: blue,
+  };
+
+  if (editId) {
+    gastos = gastos.map(g=>g.id===editId?gasto:g);
+  } else {
+    gastos = [...gastos, gasto];
+  }
+
+  cerrarForm();
+  renderVista();
+
+  if (!editId) {
+    flash("Guardando en Sheet...", false, 0);
+    try {
+      // Siempre pedir token fresco para evitar expiración
+      await appendRow(gasto);
+      flash("✓ Guardado en Google Sheet", false);
+    } catch(e) {
+      flash("⚠ No se pudo guardar: " + (e.message||"error"), true, 6000);
+      console.error("Sheet error:", e);
+    }
+  }
+}
+
+function editarGasto(id) { abrirForm(gastos.find(g=>g.id===id)); }
+function eliminarGasto(id) {
+  if (!confirm("¿Eliminar este gasto?")) return;
+  gastos = gastos.filter(g=>g.id!==id);
+  renderLista();
+}
+
+// ── Datos fallback ────────────────────────────────────────────────────────────
+const GASTOS_FALLBACK = [
+  {fecha:"2024-09-04",descripcion:"Compra terreno (c/impuestos)",detalle:"Terreno",formaPago:"Efectivo",moneda:"USD",monto:50842,tcSnapshot:null,notas:""},
+  {fecha:"2025-05-02",descripcion:"Anticipo Proyecto Santi",detalle:"Proyecto",formaPago:"Efectivo",moneda:"ARS",monto:1500000,tcSnapshot:1150,notas:""},
+  {fecha:"2025-06-14",descripcion:"Limpieza terreno",detalle:"Obra",formaPago:"Efectivo",moneda:"ARS",monto:600000,tcSnapshot:1180,notas:""},
+  {fecha:"2025-08-04",descripcion:"Escritura",detalle:"Terreno",formaPago:"Transferencia",moneda:"ARS",monto:2839000,tcSnapshot:1350,notas:""},
+  {fecha:"2025-08-15",descripcion:"Anticipo Proyecto JS 20%",detalle:"Proyecto",formaPago:"Efectivo",moneda:"ARS",monto:727575,tcSnapshot:1300,notas:""},
+  {fecha:"2025-10-22",descripcion:"Caño 110 y Manguera (Cloaca y riego)",detalle:"Obra",formaPago:"Efectivo",moneda:"ARS",monto:30000,tcSnapshot:1430,notas:""},
+  {fecha:"2025-11-18",descripcion:"Segundo pago Proyecto JS 30%",detalle:"Proyecto",formaPago:"Transferencia",moneda:"ARS",monto:1169025,tcSnapshot:1415,notas:""},
+  {fecha:"2025-12-22",descripcion:"Pago tasas municipales",detalle:"Proyecto",formaPago:"Transferencia",moneda:"ARS",monto:471933,tcSnapshot:1475,notas:""},
+  {fecha:"2026-03-16",descripcion:"Pago flexibilización m2 vivienda",detalle:"Proyecto",formaPago:"Transferencia",moneda:"ARS",monto:410000,tcSnapshot:1415,notas:""},
+  {fecha:"2026-05-14",descripcion:"Pileta 4x2.1x1.2 m VITAL",detalle:"Obra",formaPago:"Cuotas",moneda:"ARS",monto:8251987,tcSnapshot:1410,notas:"12 cuotas sin interés"},
+  {fecha:"2026-05-15",descripcion:"Tasas colegio arquitectos",detalle:"Proyecto",formaPago:"Transferencia",moneda:"ARS",monto:118583,tcSnapshot:1405,notas:""},
+  {fecha:"2026-05-19",descripcion:"2xAros H° 1.20m diámetro x0.6 + Flete",detalle:"Obra",formaPago:"Efectivo",moneda:"ARS",monto:939800,tcSnapshot:1425,notas:""},
+  {fecha:"2026-05-28",descripcion:"Movimiento de suelos",detalle:"Obra",formaPago:"Transferencia",moneda:"ARS",monto:1800000,tcSnapshot:1420,notas:""},
+  {fecha:"2026-05-28",descripcion:"Interiorismo Duplo 1/3",detalle:"Proyecto",formaPago:"Efectivo",moneda:"ARS",monto:3300000,tcSnapshot:1420,notas:""},
+  {fecha:"2026-06-11",descripcion:"Vigas y columnas laminadas madera",detalle:"Obra",formaPago:"Efectivo",moneda:"ARS",monto:16554000,tcSnapshot:1440,notas:""},
+  {fecha:"2026-06-11",descripcion:"Caños plomería platea Casa Instalador",detalle:"Obra",formaPago:"Efectivo",moneda:"ARS",monto:616119,tcSnapshot:1440,notas:""},
+];
+
+// ── Arrancar ──────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

@@ -133,7 +133,28 @@
     .form-footer { text-align: center; font-size: 12px; color: var(--gray); margin-top: 8px; }
     .warn-banner { margin-bottom: 16px; padding: 10px 14px; background: #FFF8E1; border-radius: 8px; font-size: 13px; color: #7A5F00; border: 1px solid #FFE082; }
 
-    /* FAB */
+    /* MIC */
+  #mic-btn { position: fixed; bottom: calc(24px + var(--safe-bottom)); left: 24px; width: 56px; height: 56px; border-radius: 50%; background: #1C2B1E; color: #fff; border: 2px solid #4CAF50; font-size: 24px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; z-index: 50; transition: all 0.2s; }
+  #mic-btn.recording { background: #B91C1C; border-color: #EF4444; animation: pulse 1s infinite; }
+  #mic-btn.hidden { display: none; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+  #mic-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; }
+  #mic-modal.show { display: flex; }
+  #mic-box { background: #fff; border-radius: 16px; padding: 24px; width: 90%; max-width: 420px; }
+  #mic-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; color: #1C2B1E; }
+  #mic-transcript { font-size: 14px; color: #555; min-height: 60px; padding: 10px; background: #F7F5F0; border-radius: 8px; margin-bottom: 16px; line-height: 1.5; }
+  #mic-status { font-size: 12px; color: #888; margin-bottom: 16px; text-align: center; }
+  #mic-preview { display: none; background: #E8F5E9; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+  #mic-preview .mp-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  #mic-preview .mp-label { color: #666; }
+  #mic-preview .mp-val { font-weight: 600; color: #1C2B1E; }
+  .mic-actions { display: flex; gap: 8px; }
+  .mic-actions button { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  #mic-cancel { background: #F0EDE8; color: #555; }
+  #mic-confirm { background: #1C2B1E; color: #fff; }
+  #mic-retry { background: #E8F5E9; color: #2E7D32; }
+
+  /* FAB */
     #fab { position: fixed; bottom: calc(24px + var(--safe-bottom)); right: 24px; width: 56px; height: 56px; border-radius: 50%; background: var(--verde-claro); color: #fff; border: none; font-size: 28px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; z-index: 50; }
     #fab.hidden { display: none; }
 
@@ -264,6 +285,24 @@
   </div>
 </div>
 
+<!-- MIC MODAL -->
+<div id="mic-modal">
+  <div id="mic-box">
+    <h3>🎤 Cargá un gasto por voz</h3>
+    <div id="mic-transcript">Escuchando...</div>
+    <div id="mic-status"></div>
+    <div id="mic-preview"></div>
+    <div class="mic-actions">
+      <button id="mic-cancel" onclick="cerrarMic()">Cancelar</button>
+      <button id="mic-retry" onclick="iniciarMic()" style="display:none">Reintentar</button>
+      <button id="mic-confirm" onclick="confirmarGastoVoz()" style="display:none">✓ Guardar gasto</button>
+    </div>
+  </div>
+</div>
+
+<!-- MIC BTN -->
+<button id="mic-btn" onclick="iniciarMic()" title="Cargar gasto por voz">🎤</button>
+
 <!-- FAB -->
 <button id="fab" onclick="abrirForm()">+</button>
 
@@ -272,6 +311,7 @@
 const SPREADSHEET_ID = "1Vfxx9b8N_bogNDrmKJJpCjA-oXH0XCR6RRG3gdbi2ec";
 const SHEET_NAME = "Gastos";
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzc5zREI5C9UsKM00ziqiFYUFNcaENqyI3hIBH44vVqZMeCivg7mFecAzdNIg7Xm3Nl/exec";
+const ANTHROPIC_KEY = "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";
 const SA_EMAIL = "obra-gastos-mabra@habitaringenieria.iam.gserviceaccount.com";
 const SA_KEY_ID = "c98132529756401c28d2953ed25ea51333f845ea";
 const SA_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
@@ -772,6 +812,199 @@ const GASTOS_FALLBACK = [
   {fecha:"2026-06-11",descripcion:"Vigas y columnas laminadas madera",detalle:"Obra",formaPago:"Efectivo",moneda:"ARS",monto:16554000,tcSnapshot:1440,notas:""},
   {fecha:"2026-06-11",descripcion:"Caños plomería platea Casa Instalador",detalle:"Obra",formaPago:"Efectivo",moneda:"ARS",monto:616119,tcSnapshot:1440,notas:""},
 ];
+
+// ── Voz ──────────────────────────────────────────────────────────────────────
+let mediaRecorder = null;
+let audioChunks = [];
+let gastoVoz = null;
+
+function iniciarMic() {
+  document.getElementById("mic-modal").classList.add("show");
+  document.getElementById("mic-transcript").textContent = "Escuchando... hablá ahora";
+  document.getElementById("mic-status").textContent = "";
+  document.getElementById("mic-preview").style.display = "none";
+  document.getElementById("mic-confirm").style.display = "none";
+  document.getElementById("mic-retry").style.display = "none";
+  document.getElementById("mic-btn").classList.add("recording");
+  audioChunks = [];
+
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        procesarAudio();
+      };
+      mediaRecorder.start();
+      // Detener automáticamente después de 10 segundos
+      setTimeout(() => { if (mediaRecorder?.state === "recording") mediaRecorder.stop(); }, 10000);
+    })
+    .catch(err => {
+      document.getElementById("mic-transcript").textContent = "No se pudo acceder al micrófono. Verificá los permisos del navegador.";
+      document.getElementById("mic-retry").style.display = "block";
+      document.getElementById("mic-btn").classList.remove("recording");
+    });
+}
+
+function detenerMic() {
+  if (mediaRecorder?.state === "recording") mediaRecorder.stop();
+  document.getElementById("mic-btn").classList.remove("recording");
+}
+
+function cerrarMic() {
+  detenerMic();
+  document.getElementById("mic-modal").classList.remove("show");
+  document.getElementById("mic-btn").classList.remove("recording");
+}
+
+async function procesarAudio() {
+  document.getElementById("mic-btn").classList.remove("recording");
+  document.getElementById("mic-status").textContent = "🔄 Transcribiendo...";
+  document.getElementById("mic-transcript").textContent = "Procesando tu voz...";
+
+  try {
+    // Transcribir con Whisper API
+    const blob = new Blob(audioChunks, { type: "audio/webm" });
+    const formData = new FormData();
+    formData.append("file", blob, "audio.webm");
+    formData.append("model", "whisper-1");
+    formData.append("language", "es");
+
+    const whisperRes = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${ANTHROPIC_KEY}` },
+      body: formData
+    });
+
+    let transcript = "";
+    if (whisperRes.ok) {
+      const wd = await whisperRes.json();
+      transcript = wd.text;
+    } else {
+      // Si no hay OpenAI, pedir que escriban
+      document.getElementById("mic-transcript").innerHTML =
+        `<textarea id="manual-text" style="width:100%;border:1px solid #ddd;border-radius:6px;padding:8px;font-size:14px;resize:none" rows="3" placeholder="Escribí el gasto acá..."></textarea>`;
+      document.getElementById("mic-status").textContent = "Escribí el gasto y tocá Interpretar";
+      document.getElementById("mic-confirm").textContent = "🤖 Interpretar";
+      document.getElementById("mic-confirm").style.display = "block";
+      document.getElementById("mic-confirm").onclick = () => {
+        const txt = document.getElementById("manual-text")?.value;
+        if (txt) interpretarConClaude(txt);
+      };
+      return;
+    }
+
+    document.getElementById("mic-transcript").textContent = transcript;
+    document.getElementById("mic-status").textContent = "🤖 Interpretando con IA...";
+    await interpretarConClaude(transcript);
+
+  } catch(e) {
+    // Fallback: input de texto
+    document.getElementById("mic-transcript").innerHTML =
+      `<textarea id="manual-text" style="width:100%;border:1px solid #ddd;border-radius:6px;padding:8px;font-size:14px;resize:none" rows="3" placeholder="Describí el gasto acá..."></textarea>`;
+    document.getElementById("mic-status").textContent = "Escribí el gasto y tocá Interpretar";
+    document.getElementById("mic-confirm").textContent = "🤖 Interpretar";
+    document.getElementById("mic-confirm").style.display = "block";
+    document.getElementById("mic-retry").style.display = "block";
+    document.getElementById("mic-confirm").onclick = () => {
+      const txt = document.getElementById("manual-text")?.value;
+      if (txt) interpretarConClaude(txt);
+    };
+  }
+}
+
+async function interpretarConClaude(texto) {
+  document.getElementById("mic-status").textContent = "🤖 Interpretando con Claude...";
+  const hoy = new Date().toISOString().slice(0,10);
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_KEY,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 500,
+        system: `Sos un asistente que interpreta gastos de construcción en Argentina. 
+Extraé la información del texto y devolvé SOLO un JSON con estos campos exactos:
+- fecha: string YYYY-MM-DD (si no se menciona usá ${hoy})
+- descripcion: string (descripción del gasto)
+- categoria: una de estas: Terreno, Proyecto, Obra, Mano de obra, Materiales, Transporte y fletes, Imprevistos, Otros
+- monto: number (solo el número, sin símbolos)
+- moneda: "ARS" o "USD"
+- formaPago: una de estas: Efectivo, Transferencia, Tarjeta de débito, Tarjeta de crédito, Cheque, Cuotas
+- notas: string (info adicional, puede ser vacío)
+Solo devolvé el JSON, sin explicaciones ni markdown.`,
+        messages: [{ role: "user", content: texto }]
+      })
+    });
+
+    const data = await res.json();
+    const txt = data.content?.[0]?.text || "{}";
+    const clean = txt.replace(/```json|```/g, "").trim();
+    gastoVoz = JSON.parse(clean);
+
+    // Mostrar preview
+    const tc = blue || 1450;
+    const usd = gastoVoz.moneda === "ARS" ? (gastoVoz.monto / tc).toFixed(2) : gastoVoz.monto;
+    const ars = gastoVoz.moneda === "USD" ? (gastoVoz.monto * tc).toLocaleString("es-AR") : gastoVoz.monto.toLocaleString("es-AR");
+
+    document.getElementById("mic-preview").style.display = "block";
+    document.getElementById("mic-preview").innerHTML = `
+      <div class="mp-row"><span class="mp-label">📅 Fecha</span><span class="mp-val">${gastoVoz.fecha}</span></div>
+      <div class="mp-row"><span class="mp-label">📝 Descripción</span><span class="mp-val">${gastoVoz.descripcion}</span></div>
+      <div class="mp-row"><span class="mp-label">🏷️ Categoría</span><span class="mp-val">${gastoVoz.categoria}</span></div>
+      <div class="mp-row"><span class="mp-label">💰 Monto</span><span class="mp-val">$ ${ars} ARS · U$S ${usd}</span></div>
+      <div class="mp-row"><span class="mp-label">💳 Forma de pago</span><span class="mp-val">${gastoVoz.formaPago}</span></div>
+      ${gastoVoz.notas ? `<div class="mp-row"><span class="mp-label">📌 Notas</span><span class="mp-val">${gastoVoz.notas}</span></div>` : ""}
+    `;
+    document.getElementById("mic-status").textContent = "¿Es correcto?";
+    document.getElementById("mic-confirm").textContent = "✓ Guardar gasto";
+    document.getElementById("mic-confirm").style.display = "block";
+    document.getElementById("mic-confirm").onclick = confirmarGastoVoz;
+    document.getElementById("mic-retry").style.display = "block";
+    document.getElementById("mic-retry").textContent = "🔄 Reintentar";
+    document.getElementById("mic-retry").onclick = iniciarMic;
+
+  } catch(e) {
+    document.getElementById("mic-status").textContent = "⚠ Error al interpretar. Intentá de nuevo.";
+    document.getElementById("mic-retry").style.display = "block";
+  }
+}
+
+async function confirmarGastoVoz() {
+  if (!gastoVoz) return;
+  const gasto = {
+    id: Date.now(),
+    fecha: gastoVoz.fecha,
+    descripcion: gastoVoz.descripcion,
+    detalle: "",
+    categoria: gastoVoz.categoria,
+    moneda: gastoVoz.moneda,
+    monto: gastoVoz.monto,
+    formaPago: gastoVoz.formaPago,
+    notas: gastoVoz.notas || "",
+    tcSnapshot: blue,
+  };
+  gastos = [...gastos, gasto];
+  saveLocal(gastos);
+  cerrarMic();
+  renderVista();
+
+  // Guardar en Sheet
+  flash("Guardando en Sheet...", false, 0);
+  try {
+    await appendRow(gasto);
+    flash("✓ Gasto por voz guardado en Sheet", false);
+  } catch {
+    flash("⚠ No se pudo guardar en Sheet", true);
+  }
+  gastoVoz = null;
+}
 
 // ── Arrancar ──────────────────────────────────────────────────────────────────
 init();

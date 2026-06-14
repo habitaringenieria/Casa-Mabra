@@ -322,11 +322,26 @@ const fUSD = n => n == null ? "—" : "U$S " + Number(n).toLocaleString("es-AR",
 
 function parsePesos(v) {
   if (!v) return 0;
-  return parseFloat(String(v).replace(/[$\s]/g,"").replace(/\./g,"").replace(",",".")) || 0;
+  // Formato argentino: $1.234.567 o $1.234.567,89
+  let s = String(v).replace(/[$\s]/g,"").trim();
+  // Si tiene coma decimal al final (ej: 1.234,56) → convertir
+  if (s.match(/,\d{1,2}$/)) {
+    s = s.replace(/\./g,"").replace(",",".");
+  } else {
+    // Solo puntos de miles, sin decimales
+    s = s.replace(/\./g,"");
+  }
+  return parseFloat(s) || 0;
 }
 function parseDolar(v) {
   if (!v) return 0;
-  return parseFloat(String(v).replace(/[$,\s]/g,"")) || 0;
+  // Formato: $1.450 o 1450 o $50,842
+  let s = String(v).replace(/[$\s]/g,"").trim();
+  // Si tiene coma como decimal (50,842) → reemplazar
+  if (s.match(/,\d+$/)) s = s.replace(",",".");
+  // Eliminar puntos de miles solo si no es decimal
+  s = s.replace(/\./g,"");
+  return parseFloat(s) || 0;
 }
 function fechaToISO(v) {
   if (!v) return new Date().toISOString().slice(0,10);
@@ -431,10 +446,10 @@ async function appendRow(gasto, tok) {
   const acumUSD = gastos.reduce((a,g)=>a+(getUSD(g)||0),0);
   const row = [[
     isoToFecha(gasto.fecha), gasto.descripcion, gasto.categoria, gasto.formaPago,
-    ars ? `$${Math.round(Number(ars)).toLocaleString("es-AR")}` : "",
-    tc ? `$${tc}` : "",
-    usd ? Math.round(Number(usd)) : "",
-    Math.round(acumUSD),
+    ars ? Math.round(Number(ars)) : "",
+    tc ? Number(tc) : "",
+    usd ? Number(usd).toFixed(2) : "",
+    acumUSD ? Number(acumUSD).toFixed(2) : "",
     gasto.notas||""
   ]];
   const range = encodeURIComponent(`${SHEET_NAME}!A:I`);
@@ -708,12 +723,13 @@ async function guardarGasto() {
   if (!editId) {
     flash("Guardando en Sheet...", false, 0);
     try {
-      const tok = saToken || await getToken();
-      saToken = tok;
-      await appendRow(gasto, tok);
+      // Siempre pedir token fresco para evitar expiración
+      saToken = await getToken();
+      await appendRow(gasto, saToken);
       flash("✓ Guardado en Google Sheet", false);
-    } catch {
-      flash("⚠ No se pudo guardar en Sheet", true);
+    } catch(e) {
+      flash("⚠ No se pudo guardar: " + (e.message||"error"), true, 6000);
+      console.error("Sheet error:", e);
     }
   }
 }

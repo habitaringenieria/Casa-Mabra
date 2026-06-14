@@ -452,12 +452,10 @@ async function appendRow(gasto) {
     acumUSD ? Number(acumUSD).toFixed(2) : "",
     gasto.notas||""
   ];
-  // Enviar via URL params para evitar CORS preflight
-  const params = new URLSearchParams({ data: JSON.stringify({row}) });
-  await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`, {
-    method: "GET",
-    mode: "no-cors",
-  });
+  // Enviar via GET con datos en URL (evita CORS)
+  const jsonData = JSON.stringify({row});
+  const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(jsonData)}`;
+  await fetch(url, { method: "GET", mode: "no-cors" });
 }
 
 // ── Sync ──────────────────────────────────────────────────────────────────────

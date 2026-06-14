@@ -820,35 +820,65 @@ let gastoVoz = null;
 
 function iniciarMic() {
   document.getElementById("mic-modal").classList.add("show");
-  document.getElementById("mic-transcript").textContent = "Escuchando... hablá ahora";
+  document.getElementById("mic-transcript").textContent = "Escuchando... hablá ahora 🎤";
   document.getElementById("mic-status").textContent = "";
   document.getElementById("mic-preview").style.display = "none";
   document.getElementById("mic-confirm").style.display = "none";
   document.getElementById("mic-retry").style.display = "none";
   document.getElementById("mic-btn").classList.add("recording");
-  audioChunks = [];
 
-  navigator.mediaDevices.getUserMedia({ audio: true })
-    .then(stream => {
-      mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-      mediaRecorder.onstop = () => {
-        stream.getTracks().forEach(t => t.stop());
-        procesarAudio();
-      };
-      mediaRecorder.start();
-      // Detener automáticamente después de 10 segundos
-      setTimeout(() => { if (mediaRecorder?.state === "recording") mediaRecorder.stop(); }, 10000);
-    })
-    .catch(err => {
-      document.getElementById("mic-transcript").textContent = "No se pudo acceder al micrófono. Verificá los permisos del navegador.";
-      document.getElementById("mic-retry").style.display = "block";
+  // Usar Web Speech API del navegador (funciona en Chrome sin API externa)
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.lang = "es-AR";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (e) => {
+      const transcript = Array.from(e.results).map(r => r[0].transcript).join("");
+      document.getElementById("mic-transcript").textContent = transcript;
+    };
+
+    recognition.onend = () => {
       document.getElementById("mic-btn").classList.remove("recording");
-    });
+      const txt = document.getElementById("mic-transcript").textContent;
+      if (txt && txt !== "Escuchando... hablá ahora 🎤") {
+        interpretarConClaude(txt);
+      } else {
+        mostrarInputTexto();
+      }
+    };
+
+    recognition.onerror = () => {
+      document.getElementById("mic-btn").classList.remove("recording");
+      mostrarInputTexto();
+    };
+
+    recognition.start();
+  } else {
+    // Fallback a texto si el navegador no soporta Speech API
+    document.getElementById("mic-btn").classList.remove("recording");
+    mostrarInputTexto();
+  }
+}
+
+function mostrarInputTexto() {
+  document.getElementById("mic-transcript").innerHTML =
+    `<textarea id="manual-text" style="width:100%;border:1px solid #ddd;border-radius:6px;padding:8px;font-size:14px;resize:none;font-family:inherit" rows="3" placeholder="Describí el gasto acá... ej: gasté 50000 en ladrillos, efectivo"></textarea>`;
+  document.getElementById("mic-status").textContent = "Escribí el gasto y tocá Interpretar";
+  document.getElementById("mic-confirm").textContent = "🤖 Interpretar";
+  document.getElementById("mic-confirm").style.display = "block";
+  document.getElementById("mic-retry").style.display = "block";
+  document.getElementById("mic-confirm").onclick = () => {
+    const txt = document.getElementById("manual-text")?.value;
+    if (txt) interpretarConClaude(txt);
+  };
+  document.getElementById("mic-retry").onclick = iniciarMic;
 }
 
 function detenerMic() {
-  if (mediaRecorder?.state === "recording") mediaRecorder.stop();
   document.getElementById("mic-btn").classList.remove("recording");
 }
 
@@ -933,8 +963,12 @@ async function interpretarConClaude(texto) {
       setTimeout(() => { delete window[callbackName]; script.remove(); reject(new Error("Timeout")); }, 30000);
     });
 
-    const clean = (result.text || "{}").replace(/```json|```/g, "").trim();
-    gastoVoz = JSON.parse(clean);
+    // Parsear JSON que puede venir con o sin markdown
+    let raw = result.text || "{}";
+    raw = raw.replace(/```json/g,"").replace(/```/g,"").trim();
+    // Extraer el JSON si viene con texto alrededor
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    gastoVoz = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(raw);
 
     // Mostrar preview
     const tc = blue || 1450;

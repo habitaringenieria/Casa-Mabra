@@ -448,30 +448,20 @@ async function appendRow(gasto) {
     "",
     gasto.notas||""
   ];
+  // Usar Image() para disparar el request sin restricciones CORS
+  // Google ejecuta el script aunque el navegador no pueda leer la respuesta
   return new Promise((resolve) => {
-    const cbName = "cb_" + Date.now();
-    const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}&callback=${cbName}`;
-    const script = document.createElement("script");
-    // Timeout de 10 segundos — si no responde igual resolvemos
+    const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}`;
+    const img = new Image();
+    // Esperamos 8 segundos para que Google procese el request
     const timer = setTimeout(() => {
-      delete window[cbName];
-      script.remove();
-      resolve({ ok: true, timeout: true });
-    }, 10000);
-    window[cbName] = (data) => {
+      resolve({ ok: true });
+    }, 8000);
+    img.onload = img.onerror = () => {
       clearTimeout(timer);
-      delete window[cbName];
-      script.remove();
-      resolve(data);
+      resolve({ ok: true });
     };
-    script.onerror = () => {
-      clearTimeout(timer);
-      delete window[cbName];
-      script.remove();
-      resolve({ ok: false, error: "Script error" });
-    };
-    script.src = url;
-    document.head.appendChild(script);
+    img.src = url;
   });
 }
 

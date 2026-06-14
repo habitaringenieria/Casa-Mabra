@@ -428,7 +428,14 @@ async function loadSheet(tok) {
       tcSnapshot: tc||null, notas: r[8]||""
     };
   });
-  if (rows.length > 0) { gastos = rows; saveLocal(gastos); }
+  if (rows.length > 0) {
+    // Mezclar datos del Sheet con gastos locales que aún no están en el Sheet
+    const local = loadLocal() || [];
+    const sheetDescs = rows.map(r => r.descripcion + r.fecha);
+    const soloLocales = local.filter(g => !sheetDescs.includes(g.descripcion + g.fecha));
+    gastos = [...rows, ...soloLocales];
+    saveLocal(gastos);
+  }
 }
 
 // ── Sheet: escribir via Apps Script (evita CORS) ─────────────────────────────

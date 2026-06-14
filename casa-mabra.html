@@ -723,20 +723,20 @@ async function guardarGasto() {
     tcSnapshot: blue,
   };
 
+  const esNuevo = !editId;
+
   if (editId) {
     gastos = gastos.map(g=>g.id===editId?gasto:g);
   } else {
     gastos = [...gastos, gasto];
   }
   saveLocal(gastos);
-
   cerrarForm();
   renderVista();
 
-  if (!editId) {
+  if (esNuevo) {
     flash("Guardando en Sheet...", false, 0);
     try {
-      // Siempre pedir token fresco para evitar expiración
       await appendRow(gasto);
       flash("✓ Guardado en Google Sheet", false);
     } catch(e) {

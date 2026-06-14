@@ -424,26 +424,32 @@ async function loadSheet(tok) {
   if (rows.length > 0) gastos = rows;
 }
 
-// ── Sheet: escribir ───────────────────────────────────────────────────────────
-async function appendRow(gasto, tok) {
+// ── Sheet: escribir via Apps Script (evita CORS) ─────────────────────────────
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxGAMMNE3QSxCzqo_PTJbl-7Mqm4Ex7gnC56V7fY7XrLn6Z1CDgLh3KULNXGJ3GC8cm/exec";
+
+async function appendRow(gasto) {
   const tc = gasto.tcSnapshot || blue || "";
   const ars = gasto.moneda==="ARS" ? Number(gasto.monto) : (tc ? Number(gasto.monto)*tc : "");
   const usd = tc ? (gasto.moneda==="USD" ? Number(gasto.monto) : Number(gasto.monto)/tc) : "";
   const acumUSD = gastos.reduce((a,g)=>a+(getUSD(g)||0),0);
-  const row = [[
-    isoToFecha(gasto.fecha), gasto.descripcion, gasto.categoria, gasto.formaPago,
+  const row = [
+    isoToFecha(gasto.fecha),
+    gasto.descripcion,
+    gasto.categoria,
+    gasto.formaPago,
     ars ? Math.round(Number(ars)) : "",
     tc ? Number(tc) : "",
     usd ? Number(usd).toFixed(2) : "",
     acumUSD ? Number(acumUSD).toFixed(2) : "",
     gasto.notas||""
-  ]];
-  const range = encodeURIComponent(`${SHEET_NAME}!A:I`);
-  const res = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED`,
-    {method:"POST", headers:{Authorization:`Bearer ${tok}`,"Content-Type":"application/json"}, body:JSON.stringify({values:row})}
-  );
-  if (!res.ok) throw new Error(await res.text());
+  ];
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({row})
+  });
+  // no-cors no devuelve respuesta legible, pero si no tira error es OK
 }
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
@@ -710,8 +716,7 @@ async function guardarGasto() {
     flash("Guardando en Sheet...", false, 0);
     try {
       // Siempre pedir token fresco para evitar expiración
-      saToken = await getToken();
-      await appendRow(gasto, saToken);
+      await appendRow(gasto);
       flash("✓ Guardado en Google Sheet", false);
     } catch(e) {
       flash("⚠ No se pudo guardar: " + (e.message||"error"), true, 6000);

@@ -271,7 +271,7 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 const SPREADSHEET_ID = "1Vfxx9b8N_bogNDrmKJJpCjA-oXH0XCR6RRG3gdbi2ec";
 const SHEET_NAME = "Gastos";
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBX9TgyfwJ4i_WS4rEgevcuG_TcTgWOPBTNuNIR7EuyL1nlLqzvmTkT1M6REdhkP-m/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAXVY06c0wyoJx2Ho-KoCsWI5MRmRj_LtrOzcA0EqvfIEDmHUBkhRJ2jakL0zrp_PS/exec";
 const SA_EMAIL = "obra-gastos-mabra@habitaringenieria.iam.gserviceaccount.com";
 const SA_KEY_ID = "c98132529756401c28d2953ed25ea51333f845ea";
 const SA_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
@@ -452,14 +452,12 @@ async function appendRow(gasto) {
     acumUSD ? Number(acumUSD).toFixed(2) : "",
     gasto.notas||""
   ];
-  // Usar Apps Script como proxy para evitar CORS
-  const res = await fetch(APPS_SCRIPT_URL, {
-    method: "POST",
+  // Enviar via URL params para evitar CORS preflight
+  const params = new URLSearchParams({ data: JSON.stringify({row}) });
+  await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`, {
+    method: "GET",
     mode: "no-cors",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({row})
   });
-  // no-cors no devuelve body, asumimos OK si no tira excepción
 }
 
 // ── Sync ──────────────────────────────────────────────────────────────────────

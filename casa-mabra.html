@@ -311,7 +311,7 @@
 const SPREADSHEET_ID = "1Vfxx9b8N_bogNDrmKJJpCjA-oXH0XCR6RRG3gdbi2ec";
 const SHEET_NAME = "Gastos";
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsnwEOT9DCjWX6KycTbBIQKvSXqkNO5Qvcg2nS1PT8_FI9EwOaOkm8NWpYWUPjxtxi/exec";
-const ANTHROPIC_KEY = "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";
+const ANTHROPIC_KEY = "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";
 const SA_EMAIL = "obra-gastos-mabra@habitaringenieria.iam.gserviceaccount.com";
 const SA_KEY_ID = "c98132529756401c28d2953ed25ea51333f845ea";
 const SA_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
@@ -480,7 +480,12 @@ async function appendRow(gasto) {
   const tc = gasto.tcSnapshot || blue || "";
   const ars = gasto.moneda==="ARS" ? Number(gasto.monto) : (tc ? Number(gasto.monto)*tc : "");
   const usd = tc ? (gasto.moneda==="USD" ? Number(gasto.monto) : Number(gasto.monto)/tc) : "";
-  const acumUSD = gastos.reduce((a,g)=>a+(getUSD(g)||0),0);
+  // Acumulado = suma de TODOS los gastos incluyendo el nuevo (ya está en gastos[])
+  const acumUSD = gastos.reduce((acc, g) => {
+    const tc2 = g.tcSnapshot || blue;
+    const u = g.moneda==="USD" ? Number(g.monto) : (tc2 ? Number(g.monto)/tc2 : 0);
+    return acc + (u || 0);
+  }, 0);
   const row = [
     isoToFecha(gasto.fecha),
     gasto.descripcion,

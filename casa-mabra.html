@@ -677,7 +677,6 @@ function abrirForm(g=null) {
   document.getElementById("btn-guardar").textContent = g ? "Guardar cambios" : "Registrar gasto";
   document.getElementById("f-fecha").value = g ? g.fecha : new Date().toISOString().slice(0,10);
   document.getElementById("f-desc").value = g ? g.descripcion : "";
-  document.getElementById("f-detalle").value = g ? g.detalle : "";
   document.getElementById("f-cat").value = g ? g.categoria : "Obra";
   document.getElementById("f-moneda").value = g ? g.moneda : "ARS";
   document.getElementById("f-monto").value = g ? g.monto : "";
@@ -716,7 +715,7 @@ async function guardarGasto() {
     id: editId || Date.now(),
     fecha: document.getElementById("f-fecha").value,
     descripcion: desc,
-    detalle: document.getElementById("f-detalle").value,
+    detalle: "",
     categoria: document.getElementById("f-cat").value,
     moneda: document.getElementById("f-moneda").value,
     monto, formaPago: document.getElementById("f-pago").value,

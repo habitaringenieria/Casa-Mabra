@@ -310,8 +310,8 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 const SPREADSHEET_ID = "1Vfxx9b8N_bogNDrmKJJpCjA-oXH0XCR6RRG3gdbi2ec";
 const SHEET_NAME = "Gastos";
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsnwEOT9DCjWX6KycTbBIQKvSXqkNO5Qvcg2nS1PT8_FI9EwOaOkm8NWpYWUPjxtxi/exec";
-const ANTHROPIC_KEY = "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";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby6vs0fKcGCailihOuRpiZXb0DB1esI19N3ffonTN0vXZtwsnH6iX0t7ufzVS459yy4/exec";
+const ANTHROPIC_KEY = ""; // Key guardada en Apps Script
 const SA_EMAIL = "obra-gastos-mabra@habitaringenieria.iam.gserviceaccount.com";
 const SA_KEY_ID = "c98132529756401c28d2953ed25ea51333f845ea";
 const SA_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
@@ -494,7 +494,7 @@ async function appendRow(gasto) {
     ars ? Math.round(Number(ars)) : "",
     tc ? Number(tc) : "",
     usd ? Number(usd).toFixed(2) : "",
-    acumUSD ? Number(acumUSD).toFixed(2) : "",
+    "", // El acumulado lo calcula el Sheet con fórmula
     gasto.notas||""
   ];
   // Usar JSONP para evitar CORS completamente
@@ -956,7 +956,7 @@ async function interpretarConClaude(texto) {
     const prompt = `Interpretá este gasto de construcción en Argentina y devolvé SOLO un JSON con: fecha (YYYY-MM-DD, si no se menciona usá ${hoy}), descripcion, categoria (una de: Terreno/Proyecto/Obra/Mano de obra/Materiales/Transporte y fletes/Imprevistos/Otros), monto (número sin símbolos), moneda (ARS o USD), formaPago (Efectivo/Transferencia/Tarjeta de débito/Tarjeta de crédito/Cheque/Cuotas), notas. Solo el JSON sin markdown.\n\nTexto: ${texto}`;
 
     const callbackName = "cb_claude_" + Date.now();
-    const claudeData = encodeURIComponent(JSON.stringify({ claude: true, prompt, key: ANTHROPIC_KEY }));
+    const claudeData = encodeURIComponent(JSON.stringify({ claude: true, prompt })); // key en Apps Script
     const url = `${APPS_SCRIPT_URL}?data=${claudeData}&callback=${callbackName}`;
 
     const result = await new Promise((resolve, reject) => {

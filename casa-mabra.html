@@ -268,7 +268,7 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 const SPREADSHEET_ID = "1Vfxx9b8N_bogNDrmKJJpCjA-oXH0XCR6RRG3gdbi2ec";
 const SHEET_NAME = "Gastos";
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby6vs0fKcGCailihOuRpiZXb0DB1esI19N3ffonTN0vXZtwsnH6iX0t7ufzVS459yy4/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzu4vcI1zxBEluG9myu94_VJGVSOas3FTJjoVj3Bkh9Cki2Re-4Nwf5L36CQLyaqT0l/exec";
 const SA_EMAIL = "obra-gastos-mabra@habitaringenieria.iam.gserviceaccount.com";
 const SA_KEY_ID = "c98132529756401c28d2953ed25ea51333f845ea";
 const SA_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
@@ -437,12 +437,6 @@ async function appendRow(gasto) {
   const tc = gasto.tcSnapshot || blue || "";
   const ars = gasto.moneda==="ARS" ? Number(gasto.monto) : (tc ? Number(gasto.monto)*tc : "");
   const usd = tc ? (gasto.moneda==="USD" ? Number(gasto.monto) : Number(gasto.monto)/tc) : "";
-  // Acumulado = suma de TODOS los gastos incluyendo el nuevo (ya está en gastos[])
-  const acumUSD = gastos.reduce((acc, g) => {
-    const tc2 = g.tcSnapshot || blue;
-    const u = g.moneda==="USD" ? Number(g.monto) : (tc2 ? Number(g.monto)/tc2 : 0);
-    return acc + (u || 0);
-  }, 0);
   const row = [
     isoToFecha(gasto.fecha),
     gasto.descripcion,
@@ -451,21 +445,14 @@ async function appendRow(gasto) {
     ars ? Math.round(Number(ars)) : "",
     tc ? Number(tc) : "",
     usd ? Number(usd).toFixed(2) : "",
-    "", // El acumulado lo calcula el Sheet con fórmula
+    "",
     gasto.notas||""
   ];
-  // Usar JSONP para evitar CORS completamente
-  return new Promise((resolve, reject) => {
-    const callbackName = "cb_" + Date.now();
-    const jsonData = JSON.stringify({row});
-    const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(jsonData)}&callback=${callbackName}`;
-    const script = document.createElement("script");
-    script.src = url;
-    script.onload = () => { delete window[callbackName]; script.remove(); resolve(); };
-    script.onerror = () => { delete window[callbackName]; script.remove(); reject(new Error("JSONP error")); };
-    window[callbackName] = (data) => { delete window[callbackName]; script.remove(); resolve(data); };
-    document.head.appendChild(script);
-  });
+  // Usar fetch directo con CORS habilitado en el Apps Script
+  const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}`;
+  const res = await fetch(url, { method: "GET" });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || "Error en Sheet");
 }
 
 // ── Sync ──────────────────────────────────────────────────────────────────────

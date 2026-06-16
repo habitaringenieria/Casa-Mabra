@@ -455,20 +455,25 @@ async function appendRow(gasto) {
     "",
     gasto.notas||""
   ];
-  // Usar Image() para disparar el request sin restricciones CORS
-  // Google ejecuta el script aunque el navegador no pueda leer la respuesta
+  // JSONP via script tag — único método que funciona con Apps Script
   return new Promise((resolve) => {
-    const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}`;
-    const img = new Image();
-    // Esperamos 8 segundos para que Google procese el request
+    const cbName = "cb_" + Date.now();
+    const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}&callback=${cbName}`;
+    const script = document.createElement("script");
     const timer = setTimeout(() => {
+      // Timeout: asumir que Google procesó aunque no respondió
+      if (window[cbName]) delete window[cbName];
+      script.remove();
       resolve({ ok: true });
-    }, 8000);
-    img.onload = img.onerror = () => {
+    }, 12000);
+    window[cbName] = (data) => {
       clearTimeout(timer);
-      resolve({ ok: true });
+      delete window[cbName];
+      script.remove();
+      resolve(data);
     };
-    img.src = url;
+    script.src = url;
+    document.head.appendChild(script);
   });
 }
 

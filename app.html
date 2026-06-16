@@ -176,6 +176,7 @@
     <button class="nav-btn active" onclick="setVista('lista')">Gastos</button>
     <button class="nav-btn" onclick="setVista('resumen')">Resumen</button>
     <button class="nav-btn" onclick="setVista('grafico')">Gráfico</button>
+    <button class="nav-btn" onclick="setVista('evolucion')">Evolución</button>
   </div>
 </div>
 
@@ -259,6 +260,16 @@
       <p class="form-footer" id="form-footer"></p>
     </div>
   </div>
+</div>
+
+<!-- EVOLUCIÓN -->
+<div id="vista-evolucion" class="section">
+  <h2 class="section-title">Evolución del gasto</h2>
+  <p class="section-sub" id="evolucion-sub"></p>
+  <div class="chart-card">
+    <canvas id="line-chart" height="280"></canvas>
+  </div>
+  <div id="evolucion-stats" style="display:grid;gap:8px;margin-top:12px"></div>
 </div>
 
 <!-- FAB -->
@@ -536,10 +547,11 @@ function flash(msg, isErr, duration=4000) {
 function setVista(v) {
   vistaActual = v;
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-  document.querySelectorAll(".nav-btn").forEach((b,i)=>{ b.classList.toggle("active", ["lista","resumen","grafico"][i]===v); });
+  document.querySelectorAll(".nav-btn").forEach((b,i)=>{ b.classList.toggle("active", ["lista","resumen","grafico","evolucion"][i]===v); });
   document.getElementById("vista-"+v).classList.add("active");
   document.getElementById("fab").classList.toggle("hidden", v==="form");
   renderVista();
+  if (v === "evolucion") renderEvolucion();
 }
 
 function renderVista() {
@@ -782,6 +794,119 @@ const GASTOS_FALLBACK = [
   {fecha:"2026-06-11",descripcion:"Vigas y columnas laminadas madera",detalle:"Obra",formaPago:"Efectivo",moneda:"ARS",monto:16554000,tcSnapshot:1440,notas:""},
   {fecha:"2026-06-11",descripcion:"Caños plomería platea Casa Instalador",detalle:"Obra",formaPago:"Efectivo",moneda:"ARS",monto:616119,tcSnapshot:1440,notas:""},
 ];
+
+// ── Evolución temporal ───────────────────────────────────────────────────────
+let lineChartInstance = null;
+
+function renderEvolucion() {
+  document.getElementById("evolucion-sub").textContent = 
+    blue ? `Acumulado en dólares blue · TC actual: $ ${blue.toLocaleString("es-AR")}` : "Acumulado en dólares";
+
+  // Ordenar gastos por fecha
+  const sorted = [...gastos]
+    .filter(g => g.fecha)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  // Calcular acumulado progresivo
+  let acum = 0;
+  const labels = [];
+  const values = [];
+  const tooltips = [];
+
+  sorted.forEach(g => {
+    const tc = g.tcSnapshot || blue;
+    const usd = g.moneda === "USD" ? Number(g.monto) : (tc ? Number(g.monto) / tc : 0);
+    acum += usd;
+    // Formatear fecha para mostrar
+    const [y, mo, d] = g.fecha.split("-");
+    labels.push(`${d}/${mo}/${y.slice(2)}`);
+    values.push(Math.round(acum * 100) / 100);
+    tooltips.push(g.descripcion);
+  });
+
+  if (lineChartInstance) { lineChartInstance.destroy(); lineChartInstance = null; }
+  
+  const ctx = document.getElementById("line-chart").getContext("2d");
+  lineChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "Acumulado U$S",
+        data: values,
+        borderColor: "#4CAF50",
+        backgroundColor: "rgba(76,175,80,0.1)",
+        borderWidth: 2.5,
+        pointBackgroundColor: "#4CAF50",
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => tooltips[items[0].dataIndex],
+            label: (item) => `Acumulado: ${fUSD(item.raw)}`,
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { 
+            maxRotation: 45,
+            font: { size: 10 },
+            maxTicksLimit: 12
+          },
+          grid: { display: false }
+        },
+        y: {
+          ticks: {
+            callback: (v) => "U$S " + Math.round(v).toLocaleString("es-AR"),
+            font: { size: 10 }
+          },
+          grid: { color: "rgba(0,0,0,0.05)" }
+        }
+      }
+    }
+  });
+
+  // Stats
+  const total = values[values.length - 1] || 0;
+  const primer = sorted[0]?.fecha || "";
+  const ultimo = sorted[sorted.length - 1]?.fecha || "";
+  const [py, pm, pd] = primer.split("-");
+  const [uy, um, ud] = ultimo.split("-");
+  const mesesTranscurridos = Math.max(1, Math.round((new Date(ultimo) - new Date(primer)) / (1000 * 60 * 60 * 24 * 30)));
+  const promMensual = total / mesesTranscurridos;
+
+  document.getElementById("evolucion-stats").innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="background:#1C2B1E;border-radius:12px;padding:14px 16px">
+        <div style="color:#6B8A6E;font-size:11px;margin-bottom:4px">Total invertido</div>
+        <div style="color:#F7F5F0;font-size:18px;font-weight:800">${fUSD(total)}</div>
+      </div>
+      <div style="background:#1C2B1E;border-radius:12px;padding:14px 16px">
+        <div style="color:#6B8A6E;font-size:11px;margin-bottom:4px">Promedio mensual</div>
+        <div style="color:#A8C5A0;font-size:18px;font-weight:800">${fUSD(promMensual)}</div>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+        <div style="color:#888;font-size:11px;margin-bottom:4px">Primer gasto</div>
+        <div style="font-weight:600;font-size:14px">${pd}/${pm}/${py}</div>
+        <div style="color:#888;font-size:12px">${sorted[0]?.descripcion || ""}</div>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+        <div style="color:#888;font-size:11px;margin-bottom:4px">Último gasto</div>
+        <div style="font-weight:600;font-size:14px">${ud}/${um}/${uy}</div>
+        <div style="color:#888;font-size:12px">${sorted[sorted.length-1]?.descripcion || ""}</div>
+      </div>
+    </div>
+  `;
+}
 
 // ── Arrancar ──────────────────────────────────────────────────────────────────
 init();

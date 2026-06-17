@@ -177,6 +177,7 @@
     <button class="nav-btn" onclick="setVista('resumen')">Resumen</button>
     <button class="nav-btn" onclick="setVista('grafico')">Gráfico</button>
     <button class="nav-btn" onclick="setVista('evolucion')">Evolución</button>
+    <button class="nav-btn" onclick="setVista('meses')">Meses</button>
   </div>
 </div>
 
@@ -270,6 +271,21 @@
     <canvas id="line-chart" height="280"></canvas>
   </div>
   <div id="evolucion-stats" style="display:grid;gap:8px;margin-top:12px"></div>
+</div>
+
+<!-- MESES -->
+<div id="vista-meses" class="section">
+  <h2 class="section-title">Reportes mensuales</h2>
+  <p class="section-sub" id="meses-sub"></p>
+  <div id="meses-obra-banner" style="margin-bottom:16px;padding:12px 16px;background:linear-gradient(135deg,#1C2B1E,#2A3D2C);border-radius:12px;border-left:4px solid #4CAF50">
+    <div style="color:#A8C5A0;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">🏗️ Inicio de obra</div>
+    <div style="color:#F7F5F0;font-size:15px;font-weight:700">15 de junio de 2026</div>
+    <div style="color:#6B8A6E;font-size:12px;margin-top:2px" id="meses-dias-obra"></div>
+  </div>
+  <div class="chart-card" style="margin-bottom:16px">
+    <canvas id="bar-chart" height="220"></canvas>
+  </div>
+  <div id="meses-lista"></div>
 </div>
 
 <!-- FAB -->
@@ -547,11 +563,12 @@ function flash(msg, isErr, duration=4000) {
 function setVista(v) {
   vistaActual = v;
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-  document.querySelectorAll(".nav-btn").forEach((b,i)=>{ b.classList.toggle("active", ["lista","resumen","grafico","evolucion"][i]===v); });
+  document.querySelectorAll(".nav-btn").forEach((b,i)=>{ b.classList.toggle("active", ["lista","resumen","grafico","evolucion","meses"][i]===v); });
   document.getElementById("vista-"+v).classList.add("active");
   document.getElementById("fab").classList.toggle("hidden", v==="form");
   renderVista();
   if (v === "evolucion") renderEvolucion();
+  if (v === "meses") renderMeses();
 }
 
 function renderVista() {
@@ -906,6 +923,132 @@ function renderEvolucion() {
       </div>
     </div>
   `;
+}
+
+// ── Reportes mensuales ───────────────────────────────────────────────────────
+const INICIO_OBRA = new Date("2026-06-15");
+let barChartInstance = null;
+
+function renderMeses() {
+  // Días desde inicio de obra
+  const hoy = new Date();
+  const diasObra = Math.floor((hoy - INICIO_OBRA) / (1000*60*60*24));
+  const diasEl = document.getElementById("meses-dias-obra");
+  if (diasEl) {
+    if (diasObra >= 0) {
+      diasEl.textContent = `Día ${diasObra + 1} de obra · ${Math.floor(diasObra/7)} semanas`;
+    } else {
+      const faltan = Math.abs(diasObra);
+      diasEl.textContent = `Faltan ${faltan} día${faltan !== 1 ? "s" : ""} para el inicio`;
+    }
+  }
+
+  document.getElementById("meses-sub").textContent = 
+    blue ? `Blue actual: $ ${blue.toLocaleString("es-AR")}` : "";
+
+  // Agrupar gastos por mes
+  const mesesMap = {};
+  gastos.forEach(g => {
+    if (!g.fecha) return;
+    const [y, mo] = g.fecha.split("-");
+    const key = `${y}-${mo}`;
+    if (!mesesMap[key]) mesesMap[key] = { ars: 0, usd: 0, count: 0, gastos: [] };
+    const tc = g.tcSnapshot || blue;
+    const ars = g.moneda === "ARS" ? Number(g.monto) : (tc ? Number(g.monto)*tc : 0);
+    const usd = g.moneda === "USD" ? Number(g.monto) : (tc ? Number(g.monto)/tc : 0);
+    mesesMap[key].ars += ars;
+    mesesMap[key].usd += usd;
+    mesesMap[key].count++;
+    mesesMap[key].gastos.push(g);
+  });
+
+  const mesesOrdenados = Object.keys(mesesMap).sort();
+  const MESES_ES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const labels = mesesOrdenados.map(k => {
+    const [y, mo] = k.split("-");
+    return `${MESES_ES[parseInt(mo)-1]} ${y}`;
+  });
+  const valoresUSD = mesesOrdenados.map(k => Math.round(mesesMap[k].usd * 100) / 100);
+  const valoresARS = mesesOrdenados.map(k => Math.round(mesesMap[k].ars));
+
+  // Gráfico de barras
+  if (barChartInstance) { barChartInstance.destroy(); barChartInstance = null; }
+  const ctx = document.getElementById("bar-chart").getContext("2d");
+  barChartInstance = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Gasto mensual U$S",
+        data: valoresUSD,
+        backgroundColor: mesesOrdenados.map(k => {
+          const [y, mo] = k.split("-");
+          const esMesObra = new Date(parseInt(y), parseInt(mo)-1, 15) >= INICIO_OBRA;
+          return esMesObra ? "rgba(76,175,80,0.8)" : "rgba(33,150,243,0.7)";
+        }),
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (item) => [`U$S ${Math.round(item.raw).toLocaleString("es-AR")}`,
+              `$ ${valoresARS[item.dataIndex].toLocaleString("es-AR")} ARS`]
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: {
+          ticks: { callback: v => "U$S " + Math.round(v).toLocaleString("es-AR"), font: { size: 10 } },
+          grid: { color: "rgba(0,0,0,0.05)" }
+        }
+      }
+    }
+  });
+
+  // Lista de meses
+  const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,"0")}`;
+  document.getElementById("meses-lista").innerHTML = [...mesesOrdenados].reverse().map(k => {
+    const [y, mo] = k.split("-");
+    const nombreMes = `${MESES_ES[parseInt(mo)-1]} ${y}`;
+    const d = mesesMap[k];
+    const esActual = k === mesActual;
+    const [y2, mo2] = k.split("-");
+    const esObra = new Date(parseInt(y2), parseInt(mo2)-1, 15) >= INICIO_OBRA;
+    return `<div style="background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:10px;
+      box-shadow:0 1px 4px rgba(0,0,0,0.06);
+      ${esActual ? "border-left:4px solid #4CAF50;" : ""}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-weight:700;font-size:15px;color:#1C2B1E">${nombreMes}</span>
+            ${esActual ? '<span style="background:#4CAF50;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600">MES ACTUAL</span>' : ""}
+            ${esObra && !esActual ? '<span style="background:#E8F5E9;color:#2E7D32;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600">🏗️ OBRA</span>' : ""}
+          </div>
+          <div style="color:#999;font-size:12px;margin-top:2px">${d.count} gasto${d.count!==1?"s":""}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:800;font-size:16px;color:#1C2B1E">${fUSD(d.usd)}</div>
+          <div style="color:#6B8A6E;font-size:12px">${fARS(d.ars)}</div>
+        </div>
+      </div>
+      <div style="display:grid;gap:4px">
+        ${d.gastos.map(g => {
+          const tc = g.tcSnapshot || blue;
+          const usd = g.moneda==="USD" ? Number(g.monto) : (tc ? Number(g.monto)/tc : 0);
+          return `<div style="display:flex;justify-content:space-between;font-size:12px;color:#555;padding:4px 0;border-top:1px solid #F5F5F5">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">${g.descripcion}</span>
+            <span style="font-weight:600;flex-shrink:0">${fUSD(usd)}</span>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>`;
+  }).join("");
 }
 
 // ── Arrancar ──────────────────────────────────────────────────────────────────

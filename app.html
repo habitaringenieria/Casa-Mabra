@@ -819,20 +819,15 @@ function dispararGuardadoSheet(gasto) {
     "",
     gasto.notas||""
   ];
-  debugLog("Enviando (sync): " + JSON.stringify(row));
-  const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}&autoclose=1`;
-  const win = window.open(url, "guardando_sheet", "width=400,height=500");
-  debugLog("✓ Ventana abierta sincrónicamente");
-  if (win) {
-    // Cerrar automáticamente después de 2.5s (tiempo suficiente para que el script ya haya escrito)
-    setTimeout(() => {
-      try {
-        if (!win.closed) { win.close(); debugLog("✓ Ventana cerrada automáticamente"); }
-      } catch(e) {}
-    }, 2500);
-  } else {
-    debugLog("❌ window.open devolvió null (popup bloqueado)");
-  }
+  debugLog("Enviando: " + JSON.stringify(row));
+  const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}`;
+  // fetch con keepalive: diseñado para enviar datos de forma confiable
+  // incluso si la página cambia de estado justo después. No requiere
+  // ventanas ni gestos especiales, y no se ve afectado por bloqueo de popups.
+  fetch(url, { method: "GET", mode: "no-cors", keepalive: true, cache: "no-store" })
+    .then(() => debugLog("✓ fetch keepalive completado"))
+    .catch(err => debugLog("❌ fetch keepalive error: " + err.message));
+  debugLog("✓ fetch keepalive disparado");
 }
 
 function editarGasto(id) { abrirForm(gastos.find(g=>g.id===id)); }

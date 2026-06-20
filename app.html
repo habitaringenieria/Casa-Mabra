@@ -493,22 +493,20 @@ async function appendRow(gasto) {
   ];
   debugLog("Enviando: " + JSON.stringify(row));
   const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}`;
-  debugLog("URL completa length: " + url.length);
   
   return new Promise((resolve) => {
-    debugLog("Abriendo ventana...");
-    const win = window.open(url, "_blank");
-    if (!win) {
-      debugLog("❌ window.open bloqueado (popup blocker)");
-      resolve({ ok: false, error: "popup blocked" });
-      return;
-    }
-    debugLog("✓ Ventana abierta, cerrando en 3s");
-    setTimeout(() => {
-      try { win.close(); } catch(e) {}
-      debugLog("Ventana cerrada");
-      resolve({ ok: true });
-    }, 3000);
+    // Crear un link real y simular click directo del usuario (sin async en medio)
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    debugLog("Disparando click en <a>...");
+    a.click();
+    debugLog("✓ Click disparado");
+    setTimeout(() => { a.remove(); }, 1000);
+    resolve({ ok: true });
   });
 }
 
@@ -767,7 +765,7 @@ function updatePreview() {
   } else { prev.style.display="none"; }
 }
 
-async function guardarGasto() {
+function guardarGasto() {
   const desc = document.getElementById("f-desc").value.trim();
   const monto = parseFloat(document.getElementById("f-monto").value);
   if (!desc || !monto || monto<=0) return;
@@ -786,6 +784,12 @@ async function guardarGasto() {
 
   const esNuevo = !editId;
 
+  // IMPORTANTE: disparar el click del link INMEDIATAMENTE, de forma sincrónica,
+  // antes de cualquier otra operación, para preservar el "gesto de usuario" en Safari
+  if (esNuevo) {
+    dispararGuardadoSheet(gasto);
+  }
+
   if (editId) {
     gastos = gastos.map(g=>g.id===editId?gasto:g);
   } else {
@@ -796,15 +800,37 @@ async function guardarGasto() {
   renderVista();
 
   if (esNuevo) {
-    flash("Guardando en Sheet...", false, 0);
-    try {
-      await appendRow(gasto);
-      flash("✓ Guardado en Google Sheet", false);
-    } catch(e) {
-      flash("⚠ No se pudo guardar: " + (e.message||"error"), true, 6000);
-      console.error("Sheet error:", e);
-    }
+    flash("Guardando en Sheet...", false, 3000);
   }
+}
+
+function dispararGuardadoSheet(gasto) {
+  const tc = gasto.tcSnapshot || blue || "";
+  const ars = gasto.moneda==="ARS" ? Number(gasto.monto) : (tc ? Number(gasto.monto)*tc : "");
+  const usd = tc ? (gasto.moneda==="USD" ? Number(gasto.monto) : Number(gasto.monto)/tc) : "";
+  const row = [
+    isoToFecha(gasto.fecha),
+    gasto.descripcion,
+    gasto.categoria,
+    gasto.formaPago,
+    ars ? Math.round(Number(ars)) : "",
+    tc ? Number(tc) : "",
+    usd ? Number(usd).toFixed(2) : "",
+    "",
+    gasto.notas||""
+  ];
+  debugLog("Enviando (sync): " + JSON.stringify(row));
+  const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}`;
+  // Click sincrónico, en el mismo tick que el onclick del botón "Registrar gasto"
+  const a = document.createElement("a");
+  a.href = url;
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  debugLog("✓ Click <a> disparado sincrónicamente");
+  setTimeout(() => a.remove(), 1000);
 }
 
 function editarGasto(id) { abrirForm(gastos.find(g=>g.id===id)); }

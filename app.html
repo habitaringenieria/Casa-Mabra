@@ -494,15 +494,29 @@ async function appendRow(gasto) {
   debugLog("Enviando: " + JSON.stringify(row));
   const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}`;
   debugLog("URL: " + url.slice(0,80) + "...");
-  try {
-    // no-cors: no podemos leer la respuesta, pero el request SÍ llega y se ejecuta
-    await fetch(url, { method: "GET", mode: "no-cors", cache: "no-store" });
-    debugLog("✓ Request enviado (no-cors, sin confirmación de respuesta)");
-    return { ok: true };
-  } catch(err) {
-    debugLog("❌ Fetch error: " + err.message);
-    return { ok: false, error: err.message };
-  }
+  return new Promise((resolve) => {
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    iframe.src = url;
+    const timer = setTimeout(() => {
+      debugLog("✓ iframe cargado (timeout de seguridad)");
+      iframe.remove();
+      resolve({ ok: true });
+    }, 6000);
+    iframe.onload = () => {
+      debugLog("✓ iframe onload disparado");
+      clearTimeout(timer);
+      setTimeout(() => iframe.remove(), 500);
+      resolve({ ok: true });
+    };
+    iframe.onerror = () => {
+      debugLog("❌ iframe onerror");
+      clearTimeout(timer);
+      iframe.remove();
+      resolve({ ok: false });
+    };
+    document.body.appendChild(iframe);
+  });
 }
 
 let debugLogs = [];

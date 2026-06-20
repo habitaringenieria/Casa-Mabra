@@ -821,26 +821,40 @@ function dispararGuardadoSheet(gasto) {
   ];
   debugLog("Enviando (sync): " + JSON.stringify(row));
   const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}`;
-  // Abrir en ventana pequeña (no pestaña nueva) y cerrarla sola apenas cargue
-  const win = window.open(url, "guardando_sheet", "width=1,height=1");
+  // Ventana más grande y visible — si pide login de Google, el usuario puede completarlo
+  const win = window.open(url, "guardando_sheet", "width=400,height=500");
   debugLog("✓ Ventana abierta sincrónicamente");
   if (win) {
+    let intentos = 0;
     const checkClose = setInterval(() => {
+      intentos++;
       try {
-        if (win.document && win.document.body && win.document.body.innerText.includes("ok")) {
+        const texto = win.document?.body?.innerText || "";
+        if (texto.includes('"ok":true')) {
           clearInterval(checkClose);
           win.close();
-          debugLog("✓ Ventana cerrada automáticamente");
+          debugLog("✓ Confirmado ok:true, ventana cerrada");
+        } else if (texto.includes('"ok":false')) {
+          clearInterval(checkClose);
+          debugLog("❌ Script devolvió ok:false: " + texto.slice(0,100));
+          // Dejamos la ventana abierta para que el usuario vea el error
         }
       } catch(e) {
-        // Si no podemos leer el contenido (cross-origin), cerramos por timeout
+        // Cross-origin (probablemente pantalla de login de Google) — no cerrar, dejar que el usuario actúe
+        if (intentos % 5 === 0) debugLog("⏳ Esperando (posible login de Google)...");
       }
-    }, 300);
+    }, 500);
+    // Timeout largo de 25s para dar tiempo a hacer login si es necesario
     setTimeout(() => {
       clearInterval(checkClose);
-      try { win.close(); } catch(e) {}
-      debugLog("Ventana cerrada (timeout)");
-    }, 4000);
+      try {
+        if (win && !win.closed) {
+          debugLog("⏱️ Timeout 25s — si la ventana sigue abierta, puede necesitar tu login de Google");
+        }
+      } catch(e) {}
+    }, 25000);
+  } else {
+    debugLog("❌ window.open devolvió null (popup bloqueado)");
   }
 }
 

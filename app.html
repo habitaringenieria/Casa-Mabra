@@ -492,44 +492,31 @@ async function appendRow(gasto) {
     gasto.notas||""
   ];
   debugLog("Enviando: " + JSON.stringify(row));
-  // JSONP via script tag — único método que funciona con Apps Script
-  return new Promise((resolve) => {
-    const cbName = "cb_" + Date.now();
-    const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}&callback=${cbName}`;
-    debugLog("URL: " + url.slice(0,80) + "...");
-    const script = document.createElement("script");
-    const timer = setTimeout(() => {
-      debugLog("⏱️ TIMEOUT - sin respuesta de Google en 12s");
-      if (window[cbName]) delete window[cbName];
-      script.remove();
-      resolve({ ok: true, timeout: true });
-    }, 12000);
-    window[cbName] = (data) => {
-      debugLog("✓ Respuesta: " + JSON.stringify(data));
-      clearTimeout(timer);
-      delete window[cbName];
-      script.remove();
-      resolve(data);
-    };
-    script.onerror = (e) => {
-      debugLog("❌ Script error al cargar");
-      clearTimeout(timer);
-      delete window[cbName];
-      script.remove();
-      resolve({ ok: false, error: "script load error" });
-    };
-    script.src = url;
-    document.head.appendChild(script);
-  });
+  const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}`;
+  debugLog("URL: " + url.slice(0,80) + "...");
+  try {
+    // no-cors: no podemos leer la respuesta, pero el request SÍ llega y se ejecuta
+    await fetch(url, { method: "GET", mode: "no-cors", cache: "no-store" });
+    debugLog("✓ Request enviado (no-cors, sin confirmación de respuesta)");
+    return { ok: true };
+  } catch(err) {
+    debugLog("❌ Fetch error: " + err.message);
+    return { ok: false, error: err.message };
+  }
 }
 
+let debugLogs = [];
 function debugLog(msg) {
+  debugLogs.push(new Date().toLocaleTimeString() + " — " + msg);
+  if (debugLogs.length > 50) debugLogs.shift();
+  renderDebugPanel();
+}
+function renderDebugPanel() {
   const panel = document.getElementById("debug-panel");
   if (!panel) return;
-  const line = document.createElement("div");
-  line.style.cssText = "padding:4px 8px;border-bottom:1px solid #333;font-family:monospace;font-size:11px;color:#0f0;word-break:break-all";
-  line.textContent = new Date().toLocaleTimeString() + " — " + msg;
-  panel.appendChild(line);
+  panel.innerHTML = debugLogs.map(l => 
+    `<div style="padding:4px 8px;border-bottom:1px solid #333;font-family:monospace;font-size:11px;color:#0f0;word-break:break-all">${l}</div>`
+  ).join("");
   panel.scrollTop = panel.scrollHeight;
 }
 
@@ -1091,10 +1078,7 @@ document.getElementById("debug-trigger").addEventListener("click", () => {
   if (tapCount >= 5) {
     tapCount = 0;
     document.getElementById("debug-overlay").style.display = "flex";
-    debugLog("Panel de debug activado");
-    debugLog("URL Apps Script: " + APPS_SCRIPT_URL.slice(0,70) + "...");
-    debugLog("Blue actual: " + blue);
-    debugLog("Gastos en memoria: " + gastos.length);
+    renderDebugPanel();
   }
 });
 

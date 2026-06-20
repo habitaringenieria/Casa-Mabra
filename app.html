@@ -149,7 +149,7 @@
 <!-- HEADER -->
 <div id="header">
   <div class="header-top">
-    <div class="header-title" ontouchstart="iniciarHoldDebug()" ontouchend="cancelarHoldDebug()" onmousedown="iniciarHoldDebug()" onmouseup="cancelarHoldDebug()">
+    <div class="header-title" id="debug-trigger" style="-webkit-user-select:none;user-select:none">
       <div class="eyebrow">Casa Mabra</div>
       <h1>Control de Gastos</h1>
     </div>
@@ -1081,19 +1081,22 @@ function renderMeses() {
 }
 
 // ── Arrancar ──────────────────────────────────────────────────────────────────
-// ── Debug panel (tocar y mantener el título 2s) ─────────────────────────────
-let holdTimer = null;
-function iniciarHoldDebug() {
-  holdTimer = setTimeout(() => {
+// ── Debug panel (5 toques rápidos en el título) ─────────────────────────────
+let tapCount = 0;
+let tapTimer = null;
+document.getElementById("debug-trigger").addEventListener("click", () => {
+  tapCount++;
+  clearTimeout(tapTimer);
+  tapTimer = setTimeout(() => { tapCount = 0; }, 1500);
+  if (tapCount >= 5) {
+    tapCount = 0;
     document.getElementById("debug-overlay").style.display = "flex";
     debugLog("Panel de debug activado");
-    debugLog("URL Apps Script: " + APPS_SCRIPT_URL.slice(0,60) + "...");
+    debugLog("URL Apps Script: " + APPS_SCRIPT_URL.slice(0,70) + "...");
     debugLog("Blue actual: " + blue);
-  }, 1500);
-}
-function cancelarHoldDebug() {
-  if (holdTimer) clearTimeout(holdTimer);
-}
+    debugLog("Gastos en memoria: " + gastos.length);
+  }
+});
 
 init();
 </script>

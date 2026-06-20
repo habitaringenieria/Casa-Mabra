@@ -494,28 +494,37 @@ async function appendRow(gasto) {
   debugLog("Enviando: " + JSON.stringify(row));
   const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}`;
   debugLog("URL: " + url.slice(0,80) + "...");
+  
   return new Promise((resolve) => {
+    // Crear iframe target + form que apunta a él (más compatible con Safari)
+    const iframeName = "frame_" + Date.now();
     const iframe = document.createElement("iframe");
+    iframe.name = iframeName;
     iframe.style.display = "none";
-    iframe.src = url;
-    const timer = setTimeout(() => {
-      debugLog("✓ iframe cargado (timeout de seguridad)");
-      iframe.remove();
-      resolve({ ok: true });
-    }, 6000);
-    iframe.onload = () => {
-      debugLog("✓ iframe onload disparado");
-      clearTimeout(timer);
-      setTimeout(() => iframe.remove(), 500);
-      resolve({ ok: true });
-    };
-    iframe.onerror = () => {
-      debugLog("❌ iframe onerror");
-      clearTimeout(timer);
-      iframe.remove();
-      resolve({ ok: false });
-    };
     document.body.appendChild(iframe);
+
+    const form = document.createElement("form");
+    form.method = "GET";
+    form.action = APPS_SCRIPT_URL;
+    form.target = iframeName;
+    form.style.display = "none";
+
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "data";
+    input.value = JSON.stringify({row});
+    form.appendChild(input);
+
+    document.body.appendChild(form);
+    debugLog("Form creado, enviando...");
+    form.submit();
+
+    setTimeout(() => {
+      debugLog("✓ Form enviado, limpiando");
+      form.remove();
+      iframe.remove();
+      resolve({ ok: true });
+    }, 3000);
   });
 }
 

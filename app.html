@@ -493,36 +493,20 @@ async function appendRow(gasto) {
   ];
   debugLog("Enviando: " + JSON.stringify(row));
   const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}`;
-  debugLog("URL: " + url.slice(0,80) + "...");
+  debugLog("URL completa length: " + url.length);
   
   return new Promise((resolve) => {
-    // Crear iframe target + form que apunta a él (más compatible con Safari)
-    const iframeName = "frame_" + Date.now();
-    const iframe = document.createElement("iframe");
-    iframe.name = iframeName;
-    iframe.style.display = "none";
-    document.body.appendChild(iframe);
-
-    const form = document.createElement("form");
-    form.method = "GET";
-    form.action = APPS_SCRIPT_URL;
-    form.target = iframeName;
-    form.style.display = "none";
-
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = "data";
-    input.value = JSON.stringify({row});
-    form.appendChild(input);
-
-    document.body.appendChild(form);
-    debugLog("Form creado, enviando...");
-    form.submit();
-
+    debugLog("Abriendo ventana...");
+    const win = window.open(url, "_blank");
+    if (!win) {
+      debugLog("❌ window.open bloqueado (popup blocker)");
+      resolve({ ok: false, error: "popup blocked" });
+      return;
+    }
+    debugLog("✓ Ventana abierta, cerrando en 3s");
     setTimeout(() => {
-      debugLog("✓ Form enviado, limpiando");
-      form.remove();
-      iframe.remove();
+      try { win.close(); } catch(e) {}
+      debugLog("Ventana cerrada");
       resolve({ ok: true });
     }, 3000);
   });

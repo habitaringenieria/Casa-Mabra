@@ -304,7 +304,7 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 const SPREADSHEET_ID = "1Vfxx9b8N_bogNDrmKJJpCjA-oXH0XCR6RRG3gdbi2ec";
 const SHEET_NAME = "Gastos";
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyGHGC1zSAKvnCzrNYPynkT6g-z591yYyiYRCgUVZmH_KtE8tmGGo92gQUcUpBsEPk/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzvd5OzvAv6vx2z_G7vviKPOrh0XqC7s6vst5JPKk0Dccl-cojmW2kZznMeQoeYHdl4/exec";
 const SA_EMAIL = "obra-gastos-mabra@habitaringenieria.iam.gserviceaccount.com";
 const SA_KEY_ID = "c98132529756401c28d2953ed25ea51333f845ea";
 const SA_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
@@ -820,39 +820,16 @@ function dispararGuardadoSheet(gasto) {
     gasto.notas||""
   ];
   debugLog("Enviando (sync): " + JSON.stringify(row));
-  const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}`;
-  // Ventana más grande y visible — si pide login de Google, el usuario puede completarlo
+  const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}&autoclose=1`;
   const win = window.open(url, "guardando_sheet", "width=400,height=500");
   debugLog("✓ Ventana abierta sincrónicamente");
   if (win) {
-    let intentos = 0;
-    const checkClose = setInterval(() => {
-      intentos++;
-      try {
-        const texto = win.document?.body?.innerText || "";
-        if (texto.includes('"ok":true')) {
-          clearInterval(checkClose);
-          win.close();
-          debugLog("✓ Confirmado ok:true, ventana cerrada");
-        } else if (texto.includes('"ok":false')) {
-          clearInterval(checkClose);
-          debugLog("❌ Script devolvió ok:false: " + texto.slice(0,100));
-          // Dejamos la ventana abierta para que el usuario vea el error
-        }
-      } catch(e) {
-        // Cross-origin (probablemente pantalla de login de Google) — no cerrar, dejar que el usuario actúe
-        if (intentos % 5 === 0) debugLog("⏳ Esperando (posible login de Google)...");
-      }
-    }, 500);
-    // Timeout largo de 25s para dar tiempo a hacer login si es necesario
+    // Cerrar automáticamente después de 2.5s (tiempo suficiente para que el script ya haya escrito)
     setTimeout(() => {
-      clearInterval(checkClose);
       try {
-        if (win && !win.closed) {
-          debugLog("⏱️ Timeout 25s — si la ventana sigue abierta, puede necesitar tu login de Google");
-        }
+        if (!win.closed) { win.close(); debugLog("✓ Ventana cerrada automáticamente"); }
       } catch(e) {}
-    }, 25000);
+    }, 2500);
   } else {
     debugLog("❌ window.open devolvió null (popup bloqueado)");
   }

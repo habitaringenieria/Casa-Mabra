@@ -821,16 +821,27 @@ function dispararGuardadoSheet(gasto) {
   ];
   debugLog("Enviando (sync): " + JSON.stringify(row));
   const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}`;
-  // Click sincrónico, en el mismo tick que el onclick del botón "Registrar gasto"
-  const a = document.createElement("a");
-  a.href = url;
-  a.target = "_blank";
-  a.rel = "noopener";
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  debugLog("✓ Click <a> disparado sincrónicamente");
-  setTimeout(() => a.remove(), 1000);
+  // Abrir en ventana pequeña (no pestaña nueva) y cerrarla sola apenas cargue
+  const win = window.open(url, "guardando_sheet", "width=1,height=1");
+  debugLog("✓ Ventana abierta sincrónicamente");
+  if (win) {
+    const checkClose = setInterval(() => {
+      try {
+        if (win.document && win.document.body && win.document.body.innerText.includes("ok")) {
+          clearInterval(checkClose);
+          win.close();
+          debugLog("✓ Ventana cerrada automáticamente");
+        }
+      } catch(e) {
+        // Si no podemos leer el contenido (cross-origin), cerramos por timeout
+      }
+    }, 300);
+    setTimeout(() => {
+      clearInterval(checkClose);
+      try { win.close(); } catch(e) {}
+      debugLog("Ventana cerrada (timeout)");
+    }, 4000);
+  }
 }
 
 function editarGasto(id) { abrirForm(gastos.find(g=>g.id===id)); }

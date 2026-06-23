@@ -352,6 +352,7 @@ function loadLocal() {
 }
 let gastos = [];
 let blue = null;
+let acumuladoSheet = null; // Último acumulado de la columna H del Sheet
 let saToken = null;
 let editId = null;
 let filtroCat = "Todas";
@@ -396,12 +397,14 @@ function mapCat(d) {
 }
 function getUSD(g) {
   if (g.moneda === "USD") return Number(g.monto);
-  const tc = blue || g.tcSnapshot;
+  // Prioridad: usar el TC histórico guardado (igual que en el Sheet), 
+  // solo usar el blue actual si no hay snapshot guardado
+  const tc = g.tcSnapshot || blue;
   return tc ? Number(g.monto) / tc : null;
 }
 function getARS(g) {
   if (g.moneda === "ARS") return Number(g.monto);
-  const tc = blue || g.tcSnapshot;
+  const tc = g.tcSnapshot || blue;
   return tc ? Number(g.monto) * tc : null;
 }
 
@@ -431,14 +434,24 @@ async function getToken() {
 async function fetchBlue() {
   document.getElementById("blue-val").textContent = "...";
   try {
-    const r = await fetch("https://api.bluelytics.com.ar/v2/latest");
+    const r = await fetch("https://dolarapi.com/v1/dolares/blue");
     const d = await r.json();
-    blue = Math.round((d.blue.value_buy + d.blue.value_sell) / 2);
+    blue = Math.round((d.compra + d.venta) / 2);
     document.getElementById("blue-val").textContent = "$ " + blue.toLocaleString("es-AR");
     document.getElementById("blue-time").textContent = new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
     renderVista();
   } catch {
-    document.getElementById("blue-val").textContent = "Sin conexión";
+    // Fallback a Bluelytics si dolarapi falla
+    try {
+      const r2 = await fetch("https://api.bluelytics.com.ar/v2/latest");
+      const d2 = await r2.json();
+      blue = Math.round((d2.blue.value_buy + d2.blue.value_sell) / 2);
+      document.getElementById("blue-val").textContent = "$ " + blue.toLocaleString("es-AR");
+      document.getElementById("blue-time").textContent = new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
+      renderVista();
+    } catch {
+      document.getElementById("blue-val").textContent = "Sin conexión";
+    }
   }
 }
 
@@ -464,6 +477,12 @@ async function loadSheet(tok) {
       tcSnapshot: tc||null, notas: r[8]||""
     };
   });
+  // Guardar el último acumulado de la columna H (fuente de verdad del Sheet)
+  const colHvals = (data.values||[]).map(r => r[7]).filter(v => v !== undefined && v !== "");
+  if (colHvals.length > 0) {
+    const ultimo = colHvals[colHvals.length - 1];
+    acumuladoSheet = parseDolar(ultimo);
+  }
   if (rows.length > 0) {
     // Mezclar datos del Sheet con gastos locales que aún no están en el Sheet
     const local = loadLocal() || [];
@@ -601,7 +620,17 @@ function renderVista() {
 // ── Totales ───────────────────────────────────────────────────────────────────
 function calcTotales() {
   let ars=0, usd=0;
-  gastos.forEach(g=>{ ars+=getARS(g)||0; usd+=getUSD(g)||0; });
+  gastos.forEach(g=>{ ars+=getARS(g)||0; });
+  if (acumuladoSheet !== null) {
+    // Usar el acumulado real del Sheet (fuente de verdad) + gastos locales
+    // que todavía no se sincronizaron (no tienen fromSheet)
+    usd = acumuladoSheet;
+    gastos.forEach(g => {
+      if (g.fromLocalOnly) usd += getUSD(g) || 0;
+    });
+  } else {
+    gastos.forEach(g=>{ usd+=getUSD(g)||0; });
+  }
   return {ars,usd};
 }
 function calcPorCat() {
@@ -780,6 +809,7 @@ function guardarGasto() {
     monto, formaPago: document.getElementById("f-pago").value,
     notas: document.getElementById("f-notas").value,
     tcSnapshot: blue,
+    fromLocalOnly: !editId, // marca que todavía no fue confirmado por el Sheet
   };
 
   const esNuevo = !editId;

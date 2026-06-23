@@ -665,7 +665,7 @@ function renderLista() {
     el.innerHTML=`<div class="empty"><div class="icon">🏗️</div><div class="title">No hay gastos todavía</div><div class="sub">Tocá el + para cargar el primero</div></div>`;
     return;
   }
-  el.innerHTML = [...filtrados].reverse().map(g=>{
+  el.innerHTML = [...filtrados].sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(g=>{
     const arsV=getARS(g), usdV=getUSD(g);
     return `<div class="gasto-card">
       <div class="gasto-main" onclick="toggleGasto(${g.id})">

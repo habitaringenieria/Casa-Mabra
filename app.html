@@ -389,10 +389,17 @@ function isoToFecha(iso) {
   return `${d}/${mo}/${y}`;
 }
 function mapCat(d) {
-  const s = (d||"").toLowerCase();
-  if (s.includes("terreno")) return "Terreno";
-  if (s.includes("proyecto")) return "Proyecto";
-  if (s.includes("obra")) return "Obra";
+  const valor = (d || "").trim();
+  const s = valor.toLowerCase();
+  // 1. Coincidencia exacta
+  const match = CATEGORIAS.find(c => c.toLowerCase() === s);
+  if (match) return match;
+  // 2. La categoría conocida está contenida en el texto del Sheet (ej: "Materiales varios")
+  const parcial1 = CATEGORIAS.find(c => s.includes(c.toLowerCase()));
+  if (parcial1) return parcial1;
+  // 3. El texto del Sheet está contenido en la categoría conocida (ej: "Transporte" → "Transporte y fletes")
+  const parcial2 = CATEGORIAS.find(c => s && c.toLowerCase().includes(s));
+  if (parcial2) return parcial2;
   return "Otros";
 }
 function getUSD(g) {

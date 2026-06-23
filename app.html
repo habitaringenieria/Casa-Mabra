@@ -821,13 +821,15 @@ function dispararGuardadoSheet(gasto) {
   ];
   debugLog("Enviando: " + JSON.stringify(row));
   const url = `${APPS_SCRIPT_URL}?data=${encodeURIComponent(JSON.stringify({row}))}`;
-  // fetch con keepalive: diseñado para enviar datos de forma confiable
-  // incluso si la página cambia de estado justo después. No requiere
-  // ventanas ni gestos especiales, y no se ve afectado por bloqueo de popups.
-  fetch(url, { method: "GET", mode: "no-cors", keepalive: true, cache: "no-store" })
-    .then(() => debugLog("✓ fetch keepalive completado"))
-    .catch(err => debugLog("❌ fetch keepalive error: " + err.message));
-  debugLog("✓ fetch keepalive disparado");
+  // window.open SÍ funcionó en pruebas anteriores - volvemos a este método
+  const win = window.open(url, "_blank");
+  debugLog("✓ window.open ejecutado, ventana: " + (win ? "creada" : "NULL/bloqueada"));
+  if (win) {
+    setTimeout(() => {
+      try { if (!win.closed) { win.close(); debugLog("Ventana cerrada (3s)"); } }
+      catch(e) { debugLog("No se pudo cerrar: " + e.message); }
+    }, 3000);
+  }
 }
 
 function editarGasto(id) { abrirForm(gastos.find(g=>g.id===id)); }

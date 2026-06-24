@@ -304,37 +304,7 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 const SPREADSHEET_ID = "1Vfxx9b8N_bogNDrmKJJpCjA-oXH0XCR6RRG3gdbi2ec";
 const SHEET_NAME = "Gastos";
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzvd5OzvAv6vx2z_G7vviKPOrh0XqC7s6vst5JPKk0Dccl-cojmW2kZznMeQoeYHdl4/exec";
-const SA_EMAIL = "obra-gastos-mabra@habitaringenieria.iam.gserviceaccount.com";
-const SA_KEY_ID = "c98132529756401c28d2953ed25ea51333f845ea";
-const SA_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCndGMmzKAYvBz9
-SnjBTr8OYVDobBWCHFAjfjPGKvEwS7tI8Skw5Z4nkQo2Er076cO1sDv9kSK+rFzj
-6ABNIHbY8Sd5CSF9YJMYiRAzsPBuQGEVS+W1uNRH637LpgAQh06elJkjgkBLBZN4
-AkdIr3JvjfmWbMLqqx308BDxVCXP5dXs+1Yr71d5Lg4EAgo+ThpzCF5Wf99ZVKV4
-/aANRnLeTg0aZLgevy7dKXMjCc7xvaiPRg3XDgNLFiGws7viWIT4CZjjYXYaoDMy
-Y1l4bzruVbEyWgbAPLziu5dV76fmLtjLTzkeekNSVgDS18/PBa8sXTwbJTwpy6kk
-PKk4iYcnAgMBAAECggEAEFqhDlqArjm8+Q3LYlGu/hgJ/1EC/ryGJRk/tDRgbs+O
-oG6RD8n1GrcjEKne2lmXuAhYq4h/pLCPt+BiGyY3BTP0H3GBWE3Uv9ou/2Vh7dqS
-wLIzYn6FGOsKbJgvPG4CgyFPHXUsk0cdomRSkuozmmp6vDKuDJ4epFvHw9HsiXOn
-6HMupy73Oa8SQVqrfTVvdpOWtVq8iH7Kmm7gc+CyodnYxGnsLD8C0bNr8bXbac6m
-58COGuAWOcQ+uFVTamU1hUNhgAw00yiyVZwXnSIW74872D0Lit4O5xRgQjU09ts1
-4K5NbRsMocLRL4fMhefHwuvuPA5BFMq8jIukMtSCzQKBgQDYQYJ/8SW01Tqaptve
-e3WbNc0EuAsYJ6OpwID1AT8XNrMao7gWkBO5h8INPCHU+0JS/wF9TwzpsjI1Xmtf
-G51S7jHHf+pN/FmtXpzjI+Q0j1BCT6VuFHwV7fne+TwIz9uyOKi4ln7QurThAE56
-x2Gbi6a+WVPaMzmG7F7BdWUQQwKBgQDGOttx7D+/7qIeks7S8/HjXvJ24QNfF8zl
-rGODwodJoli1I1Ax4RiRM/T2EMA27nW0x6pDKPvqljYyfihLgkBojigZ4r9L0iP8
-WIH/podNa273/ve4SrxxEySorhOghkoAhSoMKfh1VvTcIkA3OVhLwVzU/adXKYOf
-BGc5jpkhTQKBgE983NPcNojea3kW5fBEHvla8C3Q3DsXrt+hY4Uq3R7SO0kKborU
-kHt8fAZTWPgpFrrdApYlrVBk8HGPcBX4V355EREMYnohzHCeOzp+Ic5z8wM8tUjd
-/LIu085ye++dP1ql2tZmctyUFBI0A6S7jpQW48ZJnTmx5G5EiZvAY9JzAoGBAKlX
-SnRN8D/UaiZYH9tSjkdAqz0nCCxKNr3VwMWkftJGoCVN34pc0xHoItG6iZnjqCYh
-k6//6QUEAZSs9VtcEA3Bszw52lW5VQiTy6pL5rYamxe8dn63SbgHNH/tBdNSJRHA
-sKTnjdsfx9nuYJFMqcM9kkJZ1oS9cDV+G3it+t7ZAoGAX4LKtD9TnGuXMRdCd8JO
-/KYdr3WDAkxIouO201RJIxLMF3G2hNYiIZpP2PkSl+6FNsLAnvbBXAAXQJpZk3Ge
-+W1tXH2ngVSUffzc16Uyg6Ts0Y86osxA2TqTuGX+Xg/ToWRfOzsU7yjXwsuQwE6u
-S4i4sY99koHYP3yZ0D9iyjU=
------END PRIVATE KEY-----`;
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzaMQTQD03Ew162SqCgUmNhdZAUw1qpanY-6FVtHgDrSvIz-eNrDSsfKC5M_CMkDKmQ/exec";
 
 const CATEGORIAS = ["Terreno","Proyecto","Obra","Mano de obra","Materiales","Transporte y fletes","Imprevistos","Otros"];
 const FORMAS_PAGO = ["Efectivo","Transferencia","Tarjeta de débito","Tarjeta de crédito","Cheque","Cuotas"];
@@ -353,7 +323,6 @@ function loadLocal() {
 let gastos = [];
 let blue = null;
 let acumuladoSheet = null; // Último acumulado de la columna H del Sheet
-let saToken = null;
 let editId = null;
 let filtroCat = "Todas";
 let vistaActual = "lista";
@@ -416,27 +385,6 @@ function getARS(g) {
 }
 
 // ── Service Account JWT ───────────────────────────────────────────────────────
-async function getToken() {
-  const now = Math.floor(Date.now()/1000);
-  const hdr = {alg:"RS256",typ:"JWT",kid:SA_KEY_ID};
-  const pay = {iss:SA_EMAIL,scope:"https://www.googleapis.com/auth/spreadsheets",aud:"https://oauth2.googleapis.com/token",exp:now+3600,iat:now};
-  const b64 = o => btoa(JSON.stringify(o)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-  const si = `${b64(hdr)}.${b64(pay)}`;
-  const pem = SA_PRIVATE_KEY.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\n/g,"");
-  const bin = Uint8Array.from(atob(pem), c=>c.charCodeAt(0));
-  const key = await crypto.subtle.importKey("pkcs8", bin.buffer, {name:"RSASSA-PKCS1-v1_5",hash:"SHA-256"}, false, ["sign"]);
-  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(si));
-  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-  const jwt = `${si}.${sigB64}`;
-  const res = await fetch("https://oauth2.googleapis.com/token", {
-    method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"},
-    body:`grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`
-  });
-  const d = await res.json();
-  if (!d.access_token) throw new Error(d.error_description||"No token");
-  return d.access_token;
-}
-
 // ── Dólar Blue ────────────────────────────────────────────────────────────────
 async function fetchBlue() {
   document.getElementById("blue-val").textContent = "...";
@@ -462,42 +410,56 @@ async function fetchBlue() {
   }
 }
 
-// ── Sheet: leer ───────────────────────────────────────────────────────────────
-async function loadSheet(tok) {
-  const range = encodeURIComponent(`${SHEET_NAME}!A2:I100`);
-  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}`,
-    {headers:{Authorization:`Bearer ${tok}`}});
-  const data = await res.json();
-  const rows = (data.values||[]).filter(r=>r[1]).map((r,i)=>{
-    const arsVal = parsePesos(r[4]);
-    const usdVal = parseDolar(r[6]);
-    const tc = parseDolar(r[5]);
-    const moneda = arsVal > 0 ? "ARS" : "USD";
-    return {
-      id: Date.now()+i,
-      fecha: fechaToISO(r[0]),
-      descripcion: r[1]||"",
-      detalle: r[2]||"",
-      formaPago: r[3]||"Efectivo",
-      categoria: mapCat(r[2]),
-      moneda, monto: moneda==="ARS"?arsVal:usdVal,
-      tcSnapshot: tc||null, notas: r[8]||""
+// ── Sheet: leer (via Apps Script, sin credenciales en el navegador) ─────────
+async function loadSheet() {
+  return new Promise((resolve) => {
+    const cbName = "cb_read_" + Date.now();
+    const url = `${APPS_SCRIPT_URL}?action=read&callback=${cbName}`;
+    const script = document.createElement("script");
+    const timer = setTimeout(() => {
+      delete window[cbName];
+      script.remove();
+      resolve();
+    }, 10000);
+    window[cbName] = (resp) => {
+      clearTimeout(timer);
+      delete window[cbName];
+      script.remove();
+      try {
+        if (resp.ok && resp.rows) {
+          const rows = resp.rows.filter(r=>r[1]).map((r,i)=>{
+            const arsVal = parsePesos(r[4]);
+            const usdVal = parseDolar(r[6]);
+            const tc = parseDolar(r[5]);
+            const moneda = arsVal > 0 ? "ARS" : "USD";
+            return {
+              id: Date.now()+i,
+              fecha: fechaToISO(r[0]),
+              descripcion: r[1]||"",
+              detalle: r[2]||"",
+              formaPago: r[3]||"Efectivo",
+              categoria: mapCat(r[2]),
+              moneda, monto: moneda==="ARS"?arsVal:usdVal,
+              tcSnapshot: tc||null, notas: r[8]||""
+            };
+          });
+          const colHvals = resp.rows.map(r => r[7]).filter(v => v !== undefined && v !== "");
+          if (colHvals.length > 0) acumuladoSheet = parseDolar(colHvals[colHvals.length - 1]);
+          if (rows.length > 0) {
+            const local = loadLocal() || [];
+            const sheetDescs = rows.map(r => r.descripcion + r.fecha);
+            const soloLocales = local.filter(g => !sheetDescs.includes(g.descripcion + g.fecha));
+            gastos = [...rows, ...soloLocales];
+            saveLocal(gastos);
+          }
+        }
+      } catch(e) { debugLog("Error procesando lectura: " + e.message); }
+      resolve();
     };
+    script.onerror = () => { clearTimeout(timer); delete window[cbName]; script.remove(); resolve(); };
+    script.src = url;
+    document.head.appendChild(script);
   });
-  // Guardar el último acumulado de la columna H (fuente de verdad del Sheet)
-  const colHvals = (data.values||[]).map(r => r[7]).filter(v => v !== undefined && v !== "");
-  if (colHvals.length > 0) {
-    const ultimo = colHvals[colHvals.length - 1];
-    acumuladoSheet = parseDolar(ultimo);
-  }
-  if (rows.length > 0) {
-    // Mezclar datos del Sheet con gastos locales que aún no están en el Sheet
-    const local = loadLocal() || [];
-    const sheetDescs = rows.map(r => r.descripcion + r.fecha);
-    const soloLocales = local.filter(g => !sheetDescs.includes(g.descripcion + g.fecha));
-    gastos = [...rows, ...soloLocales];
-    saveLocal(gastos);
-  }
 }
 
 // ── Sheet: escribir via Apps Script (evita CORS) ─────────────────────────────
@@ -558,8 +520,7 @@ async function syncNow() {
   document.getElementById("sync-dot").textContent = "🔄 Actualizando...";
   document.getElementById("sync-btn").style.display = "none";
   try {
-    saToken = await getToken();
-    await loadSheet(saToken);
+    await loadSheet();
     document.getElementById("sync-dot").style.color = "#4CAF50";
     document.getElementById("sync-dot").textContent = "✓ Sheet sincronizado";
     document.getElementById("sync-time").textContent = "Última sync: " + new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});

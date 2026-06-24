@@ -193,6 +193,16 @@
       </div>
       <div class="totales-footer" id="totales-footer"></div>
     </div>
+    <div id="m2-card" style="background:linear-gradient(135deg,#1C2B1E,#2A3D2C);border-radius:14px;padding:14px 20px;margin-bottom:20px;border-left:4px solid #4CAF50;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="color:#A8C5A0;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">📐 Costo por m²</div>
+        <div style="color:#6B8A6E;font-size:11px">Sin terreno · 270,17 m²</div>
+      </div>
+      <div style="text-align:right">
+        <div id="m2-usd" style="color:#F7F5F0;font-weight:800;font-size:17px">U$S 0/m²</div>
+        <div id="m2-ars" style="color:#A8C5A0;font-size:12px">$ 0/m²</div>
+      </div>
+    </div>
     <div class="filtros" id="filtros"></div>
     <div id="lista-gastos"></div>
   </div>
@@ -307,6 +317,7 @@ const SHEET_NAME = "Gastos";
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzaMQTQD03Ew162SqCgUmNhdZAUw1qpanY-6FVtHgDrSvIz-eNrDSsfKC5M_CMkDKmQ/exec";
 
 const CATEGORIAS = ["Terreno","Proyecto","Obra","Mano de obra","Materiales","Transporte y fletes","Imprevistos","Otros"];
+const SUPERFICIE_M2 = 270.17; // Superficie total cubierta + semicubierta
 const FORMAS_PAGO = ["Efectivo","Transferencia","Tarjeta de débito","Tarjeta de crédito","Cheque","Cuotas"];
 const COLORES = ["#4CAF50","#2196F3","#FF9800","#E91E63","#9C27B0","#00BCD4","#FF5722","#8BC34A"];
 
@@ -612,6 +623,23 @@ function calcPorCat() {
   return map;
 }
 
+// ── Costo por m² (excluye categoría Terreno: compra y escritura) ────────────
+function calcCostoM2() {
+  const cat = calcPorCat();
+  let arsSinTerreno = 0, usdSinTerreno = 0;
+  CATEGORIAS.forEach(c => {
+    if (c === "Terreno") return;
+    arsSinTerreno += cat[c]?.ars || 0;
+    usdSinTerreno += cat[c]?.usd || 0;
+  });
+  return {
+    ars: arsSinTerreno,
+    usd: usdSinTerreno,
+    arsPorM2: arsSinTerreno / SUPERFICIE_M2,
+    usdPorM2: usdSinTerreno / SUPERFICIE_M2,
+  };
+}
+
 // ── Render Lista ──────────────────────────────────────────────────────────────
 function renderLista() {
   const tot = calcTotales();
@@ -619,6 +647,10 @@ function renderLista() {
   document.getElementById("total-usd").textContent = fUSD(tot.usd);
   document.getElementById("totales-footer").textContent =
     `${gastos.length} gastos${blue ? " · Blue: $ "+blue.toLocaleString("es-AR") : ""}`;
+
+  const m2 = calcCostoM2();
+  document.getElementById("m2-usd").textContent = fUSD(m2.usdPorM2) + "/m²";
+  document.getElementById("m2-ars").textContent = fARS(m2.arsPorM2) + "/m²";
 
   // Filtros
   const cats = ["Todas",...CATEGORIAS.filter(c=>gastos.some(g=>g.categoria===c))];
@@ -672,12 +704,25 @@ function setFiltro(c) { filtroCat=c; renderLista(); }
 function renderResumen() {
   const tot = calcTotales();
   const cat = calcPorCat();
+  const m2 = calcCostoM2();
   document.getElementById("resumen-sub").textContent = blue ? `Blue actual: $ ${blue.toLocaleString("es-AR")}` : "";
   const activeCats = CATEGORIAS.filter(c=>cat[c]?.count>0);
   document.getElementById("resumen-content").innerHTML =
     `<div class="resumen-total">
       <div class="rl">Total general</div>
       <div style="text-align:right"><div class="rv-ars">${fARS(tot.ars)}</div><div class="rv-usd">${fUSD(tot.usd)}</div></div>
+    </div>
+    <div style="background:linear-gradient(135deg,#1C2B1E,#2A3D2C);border-radius:12px;padding:16px 20px;margin-bottom:14px;border-left:4px solid #4CAF50">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="color:#A8C5A0;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">📐 Costo por m²</div>
+          <div style="color:#6B8A6E;font-size:11px">Excluye terreno · ${SUPERFICIE_M2} m²</div>
+        </div>
+        <div style="text-align:right">
+          <div style="color:#F7F5F0;font-weight:800;font-size:18px">${fUSD(m2.usdPorM2)}<span style="font-size:11px;color:#6B8A6E">/m²</span></div>
+          <div style="color:#A8C5A0;font-size:13px">${fARS(m2.arsPorM2)}/m²</div>
+        </div>
+      </div>
     </div>` +
     activeCats.map((c,i)=>{
       const d=cat[c], pct=tot.ars>0?(d.ars/tot.ars)*100:0;

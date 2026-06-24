@@ -196,7 +196,7 @@
     <div id="m2-card" style="background:linear-gradient(135deg,#1C2B1E,#2A3D2C);border-radius:14px;padding:14px 20px;margin-bottom:20px;border-left:4px solid #4CAF50;display:flex;justify-content:space-between;align-items:center">
       <div>
         <div style="color:#A8C5A0;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">📐 Costo por m²</div>
-        <div style="color:#6B8A6E;font-size:11px">Sin terreno · 270,17 m²</div>
+        <div style="color:#6B8A6E;font-size:11px">Solo obra · 270,17 m²</div>
       </div>
       <div style="text-align:right">
         <div id="m2-usd" style="color:#F7F5F0;font-weight:800;font-size:17px">U$S 0/m²</div>
@@ -623,20 +623,21 @@ function calcPorCat() {
   return map;
 }
 
-// ── Costo por m² (excluye categoría Terreno: compra y escritura) ────────────
+// ── Costo por m² (excluye Terreno y Proyecto: foco solo en obra) ────────────
 function calcCostoM2() {
   const cat = calcPorCat();
-  let arsSinTerreno = 0, usdSinTerreno = 0;
+  const EXCLUIR = ["Terreno", "Proyecto"];
+  let arsObra = 0, usdObra = 0;
   CATEGORIAS.forEach(c => {
-    if (c === "Terreno") return;
-    arsSinTerreno += cat[c]?.ars || 0;
-    usdSinTerreno += cat[c]?.usd || 0;
+    if (EXCLUIR.includes(c)) return;
+    arsObra += cat[c]?.ars || 0;
+    usdObra += cat[c]?.usd || 0;
   });
   return {
-    ars: arsSinTerreno,
-    usd: usdSinTerreno,
-    arsPorM2: arsSinTerreno / SUPERFICIE_M2,
-    usdPorM2: usdSinTerreno / SUPERFICIE_M2,
+    ars: arsObra,
+    usd: usdObra,
+    arsPorM2: arsObra / SUPERFICIE_M2,
+    usdPorM2: usdObra / SUPERFICIE_M2,
   };
 }
 
@@ -716,7 +717,7 @@ function renderResumen() {
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <div style="color:#A8C5A0;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">📐 Costo por m²</div>
-          <div style="color:#6B8A6E;font-size:11px">Excluye terreno · ${SUPERFICIE_M2} m²</div>
+          <div style="color:#6B8A6E;font-size:11px">Solo obra (sin terreno ni proyecto) · ${SUPERFICIE_M2} m²</div>
         </div>
         <div style="text-align:right">
           <div style="color:#F7F5F0;font-weight:800;font-size:18px">${fUSD(m2.usdPorM2)}<span style="font-size:11px;color:#6B8A6E">/m²</span></div>

@@ -1256,7 +1256,8 @@ function renderMateriales() {
     subMap[sub].count++;
   });
 
-  const activeSubs = SUBCATS_MATERIALES.filter(s => subMap[s]?.count > 0);
+  const activeSubs = SUBCATS_MATERIALES.filter(s => subMap[s]?.count > 0)
+    .sort((a, b) => subMap[b].usd - subMap[a].usd);
   const vals = activeSubs.map(s => subMap[s].usd);
   const totalUSD = vals.reduce((a,b) => a+b, 0);
   const totalARS = activeSubs.reduce((a,s) => a + subMap[s].ars, 0);

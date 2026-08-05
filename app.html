@@ -355,13 +355,26 @@ function parsePesos(v) { return parseMonto(v); }
 function parseDolar(v) { return parseMonto(v); }
 function fechaToISO(v) {
   if (!v) return new Date().toISOString().slice(0,10);
-  const m = String(v).match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+  const s = String(v).trim();
+  // Ya está en formato YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // Formato ISO con hora: 2026-08-04T03:00:00.000Z → tomar solo la parte de fecha local
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+    // Usar fecha local (no UTC) para evitar desfase de zona horaria Argentina (-3h)
+    const d = new Date(s);
+    const y = d.getFullYear();
+    const mo = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    return `${y}-${mo}-${dd}`;
+  }
+  // Formato dd/mm/yyyy o dd/mm/yy
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
   if (m) {
     const d=m[1].padStart(2,"0"), mo=m[2].padStart(2,"0");
     let y=m[3]||"2026"; if(y.length===2) y="20"+y;
     return `${y}-${mo}-${d}`;
   }
-  return v;
+  return s;
 }
 function isoToFecha(iso) {
   if (!iso) return "";
@@ -458,8 +471,8 @@ async function loadSheet() {
           if (colHvals.length > 0) acumuladoSheet = parseDolar(colHvals[colHvals.length - 1]);
           if (rows.length > 0) {
             const local = loadLocal() || [];
-            const sheetDescs = rows.map(r => r.descripcion + r.fecha);
-            const soloLocales = local.filter(g => !sheetDescs.includes(g.descripcion + g.fecha));
+            const sheetDescs = new Set(rows.map(r => r.descripcion.trim().toLowerCase()));
+            const soloLocales = local.filter(g => !sheetDescs.has(g.descripcion.trim().toLowerCase()));
             gastos = [...rows, ...soloLocales];
             saveLocal(gastos);
           }
@@ -556,7 +569,8 @@ async function init() {
   // Cargar desde localStorage primero (persiste entre recargas)
   const localData = loadLocal();
   if (localData && localData.length > 0) {
-    gastos = localData;
+    // Normalizar fechas que puedan tener formato ISO con hora
+    gastos = localData.map(g => ({...g, fecha: fechaToISO(g.fecha)}));
   } else {
     gastos = GASTOS_FALLBACK.map((g,i)=>({...g,id:i+1,categoria:mapCat(g.detalle)}));
   }
@@ -1155,6 +1169,15 @@ document.getElementById("debug-trigger").addEventListener("click", () => {
     tapCount = 0;
     document.getElementById("debug-overlay").style.display = "flex";
     renderDebugPanel();
+    // Agregar botón de limpiar caché si no existe
+    if (!document.getElementById("btn-clear-cache")) {
+      const btn = document.createElement("button");
+      btn.id = "btn-clear-cache";
+      btn.textContent = "🗑️ Limpiar caché local";
+      btn.style.cssText = "margin:12px;padding:10px 16px;background:#B91C1C;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;width:calc(100% - 24px)";
+      btn.onclick = () => { localStorage.clear(); location.reload(); };
+      document.getElementById("debug-overlay").appendChild(btn);
+    }
   }
 });
 

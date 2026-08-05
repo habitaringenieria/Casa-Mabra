@@ -1245,12 +1245,14 @@ function renderMateriales() {
   const subMap = {};
   SUBCATS_MATERIALES.forEach(s => subMap[s] = { usd: 0, ars: 0, count: 0 });
 
-  gastos.filter(g => g.categoria === "Materiales").forEach(g => {
-    // Usar subcategoría del Sheet si existe, sino clasificar localmente
+  gastos.filter(g => g.categoria === "Materiales" || (g.subcategoria && g.subcategoria !== "General" && g.subcategoria !== "Terreno" && g.subcategoria !== "Honorarios" && g.subcategoria !== "Dirección de obra" && g.subcategoria !== "Mano de obra" && g.subcategoria !== "Transporte" && g.subcategoria !== "Imprevisto" && g.categoria === "Materiales")).forEach(g => {
     const sub = g.subcategoria || clasificarDescripcion(g.categoria, g.descripcion) || "Otros materiales";
     if (!subMap[sub]) subMap[sub] = { usd: 0, ars: 0, count: 0 };
-    subMap[sub].usd += getUSD(g) || 0;
-    subMap[sub].ars += getARS(g) || 0;
+    // Usar el valor histórico del Sheet (monto en dólares de columna G) si el gasto es en ARS
+    const usdVal = g.moneda === "USD" ? Number(g.monto) : (g.tcSnapshot ? Number(g.monto) / g.tcSnapshot : (blue ? Number(g.monto) / blue : 0));
+    const arsVal = g.moneda === "ARS" ? Number(g.monto) : (g.tcSnapshot ? Number(g.monto) * g.tcSnapshot : 0);
+    subMap[sub].usd += usdVal;
+    subMap[sub].ars += arsVal;
     subMap[sub].count++;
   });
 

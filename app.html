@@ -330,7 +330,7 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 const SPREADSHEET_ID = "1Vfxx9b8N_bogNDrmKJJpCjA-oXH0XCR6RRG3gdbi2ec";
 const SHEET_NAME = "Gastos";
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDi239J5Aa1zHBun8U-cc1atiECepDG-leDjNEbyxPo7FNhf9ddnJWaEv7mcSxqiOm/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwKCTdOlML2wgAv5qEAOhRuhsBuSv7dzxWnulLJ7H7HLFP5phmPABDiA17NQBq6X3Rg/exec";
 
 const CATEGORIAS = ["Terreno","Proyecto","Obra","Mano de obra","Materiales","Transporte y fletes","Imprevistos","Otros"];
 const SUPERFICIE_M2 = 270.17; // Superficie total cubierta + semicubierta
@@ -1214,16 +1214,16 @@ function renderMeses() {
 
 // ── Clasificación de subcategorías ────────────────────────────────────────────
 const SUBCAT_COLORES = ["#E53935","#FB8C00","#FDD835","#43A047","#00ACC1","#1E88E5","#8E24AA","#F06292","#6D4C41"];
-const SUBCATS_MATERIALES = ["Estructura H°A°","Paneles SIP","Calefacción","Aberturas","Instalaciones eléctricas","Instalaciones sanitarias","Terminaciones","Aislación","Otros materiales"];
+const SUBCATS_MATERIALES = ["Estructura H°A°","Paneles SIP","Calefacción y Aberturas PVC","Aberturas","Instalaciones eléctricas","Instalaciones sanitarias","Terminaciones","Aislación","Otros materiales"];
 
 function clasificarDescripcion(categoria, descripcion) {
   const cat = (categoria||"").toLowerCase();
   const desc = (descripcion||"").toLowerCase();
   const texto = cat + " " + desc;
   if (cat.includes("material")) {
-    if (/losa radiante/.test(texto)) return "Calefacción";
-    if (/panel.*sip|kit.*sip|sip.*panel|varilla|htt14|htt16|htt\d+|anclaje/.test(texto)) return "Paneles SIP";
-    if (/aberturas?.*pvc|ventana|puerta|abertura(?!.*losa)|marco/.test(texto)) return "Aberturas";
+    if (/losa radiante|aberturas?.*pvc|abertura(?!.*losa).*pvc|pvc.*abertura/.test(texto)) return "Calefacción y Aberturas PVC";
+    if (/panel.*sip|kit.*sip|sip.*panel|propanel|pro.?panel|varilla|htt14|htt16|htt\d+|anclaje/.test(texto)) return "Paneles SIP";
+    if (/ventana|puerta|marco/.test(texto)) return "Aberturas";
     if (/piso|cerámic|porcellan|ceramic/.test(texto)) return "Terminaciones";
     if (/pintura|yeso|revestim|fondo/.test(texto)) return "Terminaciones";
     if (/hierro|barra|hormig|cemento|piedra|arena|fenólic|fenolic|tirante|klaukol|bloque|ladrillo|mezcla/.test(texto)) return "Estructura H°A°";

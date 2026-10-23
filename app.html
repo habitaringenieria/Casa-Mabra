@@ -12,8 +12,8 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     :root {
-      --verde: #1C2B1E; --verde-claro: #4CAF50; --verde-medio: #A8C5A0; --verde-oscuro: #6B8A6E;
-      --bg: #F7F5F0; --white: #fff; --text: #1C2B1E; --gray: #888; --border: #DDD;
+      --verde: #1A1A1A; --verde-claro: #8B6F47; --verde-medio: #C4A882; --verde-oscuro: #9E8060;
+      --bg: #EDE8E1; --white: #FAF8F5; --text: #1A1A1A; --gray: #888; --border: #D8D0C4;
       --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom);
     }
     body { font-family: -apple-system, 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
@@ -26,25 +26,25 @@
     }
     .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
     .header-title .eyebrow { color: var(--verde-medio); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
-    .header-title h1 { color: #F7F5F0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    .header-title h1 { color: #FAF8F5; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
     .header-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-    .blue-label { font-size: 10px; color: var(--verde-oscuro); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
-    .blue-value { color: #F7F5F0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
-    .blue-time { font-size: 10px; color: var(--verde-oscuro); }
+    .blue-label { font-size: 10px; color: var(--verde-medio); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+    .blue-value { color: #FAF8F5; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+    .blue-time { font-size: 10px; color: var(--verde-medio); }
     .sync-status { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
-    .sync-time { font-size: 10px; color: var(--verde-oscuro); }
-    .btn-sm { background: rgba(255,255,255,0.1); border: none; color: var(--verde-medio); border-radius: 4px; padding: 2px 7px; cursor: pointer; font-size: 13px; }
+    .sync-time { font-size: 10px; color: var(--verde-medio); }
+    .btn-sm { background: rgba(255,255,255,0.12); border: none; color: var(--verde-medio); border-radius: 4px; padding: 2px 7px; cursor: pointer; font-size: 13px; }
 
     /* STATUS BAR */
     #status-bar { padding: 6px 16px; font-size: 12px; display: none; }
     #status-bar.show { display: block; }
-    #status-bar.ok { background: #1E3A20; color: var(--verde-medio); }
+    #status-bar.ok { background: #2A2218; color: var(--verde-medio); }
     #status-bar.err { background: #3D1C1C; color: #EF9A9A; }
 
     /* NAV */
     .nav { display: flex; }
     .nav-btn { flex: 1; padding: 10px 0; border: none; background: none; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--verde-oscuro); border-bottom: 2px solid transparent; }
-    .nav-btn.active { color: #F7F5F0; border-bottom-color: var(--verde-claro); }
+    .nav-btn.active { color: #FAF8F5; border-bottom-color: var(--verde-claro); }
 
     /* CONTENT */
     #content { max-width: 680px; margin: 0 auto; padding: 0 16px; padding-bottom: calc(90px + var(--safe-bottom)); }
@@ -165,7 +165,7 @@
       </div>
       <div>
         <div class="sync-status">
-          <span id="sync-dot" style="color:#6B8A6E">⏳ Conectando...</span>
+          <span id="sync-dot" style="color:#9E8060">⏳ Conectando...</span>
           <button class="btn-sm" id="sync-btn" onclick="syncNow()" style="display:none">↺</button>
         </div>
         <div class="sync-time" id="sync-time"></div>
@@ -195,14 +195,14 @@
       </div>
       <div class="totales-footer" id="totales-footer"></div>
     </div>
-    <div id="m2-card" style="background:linear-gradient(135deg,#1C2B1E,#2A3D2C);border-radius:14px;padding:14px 20px;margin-bottom:20px;border-left:4px solid #4CAF50;display:flex;justify-content:space-between;align-items:center">
+    <div id="m2-card" style="background:linear-gradient(135deg,#1A1A1A,#2C2520);border-radius:14px;padding:14px 20px;margin-bottom:20px;border-left:4px solid #8B6F47;display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div style="color:#A8C5A0;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">📐 Costo por m²</div>
-        <div style="color:#6B8A6E;font-size:11px">Solo obra · 270,17 m²</div>
+        <div style="color:#C4A882;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">📐 Costo por m²</div>
+        <div style="color:#9E8060;font-size:11px">Solo obra · 270,17 m²</div>
       </div>
       <div style="text-align:right">
         <div id="m2-usd" style="color:#F7F5F0;font-weight:800;font-size:17px">U$S 0/m²</div>
-        <div id="m2-ars" style="color:#A8C5A0;font-size:12px">$ 0/m²</div>
+        <div id="m2-ars" style="color:#C4A882;font-size:12px">$ 0/m²</div>
       </div>
     </div>
     <div class="filtros" id="filtros"></div>
@@ -289,10 +289,10 @@
 <div id="vista-meses" class="section">
   <h2 class="section-title">Reportes mensuales</h2>
   <p class="section-sub" id="meses-sub"></p>
-  <div id="meses-obra-banner" style="margin-bottom:16px;padding:12px 16px;background:linear-gradient(135deg,#1C2B1E,#2A3D2C);border-radius:12px;border-left:4px solid #4CAF50">
-    <div style="color:#A8C5A0;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">🏗️ Inicio de obra</div>
+  <div id="meses-obra-banner" style="margin-bottom:16px;padding:12px 16px;background:linear-gradient(135deg,#1A1A1A,#2C2520);border-radius:12px;border-left:4px solid #8B6F47">
+    <div style="color:#C4A882;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">🏗️ Inicio de obra</div>
     <div style="color:#F7F5F0;font-size:15px;font-weight:700">15 de junio de 2026</div>
-    <div style="color:#6B8A6E;font-size:12px;margin-top:2px" id="meses-dias-obra"></div>
+    <div style="color:#9E8060;font-size:12px;margin-top:2px" id="meses-dias-obra"></div>
   </div>
   <div class="chart-card" style="margin-bottom:16px">
     <canvas id="bar-chart" height="220"></canvas>
@@ -313,9 +313,9 @@
 <div id="vista-materiales" class="section">
   <h2 class="section-title">Desglose de Materiales</h2>
   <p class="section-sub" id="mat-sub"></p>
-  <div id="mat-clasificar-banner" style="background:#1E3A20;border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
-    <div style="color:#A8C5A0;font-size:13px">Clasificar gastos en el Sheet</div>
-    <button id="btn-clasificar" onclick="clasificarTodos()" style="background:#4CAF50;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">Clasificar todo</button>
+  <div id="mat-clasificar-banner" style="background:#2C2520;border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+    <div style="color:#C4A882;font-size:13px">Clasificar gastos en el Sheet</div>
+    <button id="btn-clasificar" onclick="clasificarTodos()" style="background:#8B6F47;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">Clasificar todo</button>
   </div>
   <div class="chart-card" style="margin-bottom:16px">
     <canvas id="mat-chart" height="260"></canvas>
@@ -336,7 +336,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxt-7YLsVWY3WQS
 const CATEGORIAS = ["Terreno","Proyecto","Obra","Mano de obra","Materiales","Equipamiento","Transporte y fletes","Imprevistos","Otros"];
 const SUPERFICIE_M2 = 270.17; // Superficie total cubierta + semicubierta
 const FORMAS_PAGO = ["Efectivo","Transferencia","Tarjeta de débito","Tarjeta de crédito","Cheque","Cuotas"];
-const COLORES = ["#4CAF50","#2196F3","#FF9800","#E91E63","#9C27B0","#00BCD4","#FF5722","#8BC34A"];
+const COLORES = ["#8B6F47","#2196F3","#C4883A","#E91E63","#7B5EA7","#4A90A4","#D4603A","#A89060"];
 
 // ── Estado ────────────────────────────────────────────────────────────────────
 function saveLocal(g) {
@@ -563,7 +563,7 @@ async function syncNow() {
   document.getElementById("sync-btn").style.display = "none";
   try {
     await loadSheet();
-    document.getElementById("sync-dot").style.color = "#4CAF50";
+    document.getElementById("sync-dot").style.color = "#8B6F47";
     document.getElementById("sync-dot").textContent = "✓ Sheet sincronizado";
     document.getElementById("sync-time").textContent = "Última sync: " + new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
     document.getElementById("sync-btn").style.display = "";
@@ -746,15 +746,15 @@ function renderResumen() {
       <div class="rl">Total general</div>
       <div style="text-align:right"><div class="rv-ars">${fARS(tot.ars)}</div><div class="rv-usd">${fUSD(tot.usd)}</div></div>
     </div>
-    <div style="background:linear-gradient(135deg,#1C2B1E,#2A3D2C);border-radius:12px;padding:16px 20px;margin-bottom:14px;border-left:4px solid #4CAF50">
+    <div style="background:linear-gradient(135deg,#1A1A1A,#2C2520);border-radius:12px;padding:16px 20px;margin-bottom:14px;border-left:4px solid #8B6F47">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
-          <div style="color:#A8C5A0;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">📐 Costo por m²</div>
-          <div style="color:#6B8A6E;font-size:11px">Solo obra (sin terreno ni proyecto) · ${SUPERFICIE_M2} m²</div>
+          <div style="color:#C4A882;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">📐 Costo por m²</div>
+          <div style="color:#9E8060;font-size:11px">Solo obra (sin terreno ni proyecto) · ${SUPERFICIE_M2} m²</div>
         </div>
         <div style="text-align:right">
-          <div style="color:#F7F5F0;font-weight:800;font-size:18px">${fUSD(m2.usdPorM2)}<span style="font-size:11px;color:#6B8A6E">/m²</span></div>
-          <div style="color:#A8C5A0;font-size:13px">${fARS(m2.arsPorM2)}/m²</div>
+          <div style="color:#FAF8F5;font-weight:800;font-size:18px">${fUSD(m2.usdPorM2)}<span style="font-size:11px;color:#9E8060">/m²</span></div>
+          <div style="color:#C4A882;font-size:13px">${fARS(m2.arsPorM2)}/m²</div>
         </div>
       </div>
     </div>` +
@@ -829,10 +829,12 @@ function renderGrafico() {
     const pct = totalCats > 0 ? (cat[c].usd/totalCats*100) : 0;
     return `<div class="legend-item">
       <div class="legend-dot" style="background:${COLORES[i%COLORES.length]}"></div>
-      <div class="legend-name">${c}</div>
+      <div style="flex:1">
+        <div class="legend-name">${c}</div>
+        <div style="font-size:12px;color:#8B6F47;font-weight:700">${pct.toFixed(1)}%</div>
+      </div>
       <div style="text-align:right">
         <div class="legend-usd">${fUSD(cat[c].usd)}</div>
-        <div style="font-size:12px;color:#4CAF50;font-weight:700">${pct.toFixed(1)}%</div>
         <div class="legend-ars">${fARS(cat[c].ars)}</div>
       </div>
     </div>`;
@@ -1014,10 +1016,10 @@ function renderEvolucion() {
       datasets: [{
         label: "Acumulado U$S",
         data: values,
-        borderColor: "#4CAF50",
+        borderColor: "#8B6F47",
         backgroundColor: "rgba(76,175,80,0.1)",
         borderWidth: 2.5,
-        pointBackgroundColor: "#4CAF50",
+        pointBackgroundColor: "#8B6F47",
         pointRadius: 5,
         pointHoverRadius: 7,
         fill: true,
@@ -1066,13 +1068,13 @@ function renderEvolucion() {
 
   document.getElementById("evolucion-stats").innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div style="background:#1C2B1E;border-radius:12px;padding:14px 16px">
-        <div style="color:#6B8A6E;font-size:11px;margin-bottom:4px">Total invertido</div>
+      <div style="background:#1A1A1A;border-radius:12px;padding:14px 16px">
+        <div style="color:#9E8060;font-size:11px;margin-bottom:4px">Total invertido</div>
         <div style="color:#F7F5F0;font-size:18px;font-weight:800">${fUSD(total)}</div>
       </div>
-      <div style="background:#1C2B1E;border-radius:12px;padding:14px 16px">
-        <div style="color:#6B8A6E;font-size:11px;margin-bottom:4px">Promedio mensual</div>
-        <div style="color:#A8C5A0;font-size:18px;font-weight:800">${fUSD(promMensual)}</div>
+      <div style="background:#1A1A1A;border-radius:12px;padding:14px 16px">
+        <div style="color:#9E8060;font-size:11px;margin-bottom:4px">Promedio mensual</div>
+        <div style="color:#C4A882;font-size:18px;font-weight:800">${fUSD(promMensual)}</div>
       </div>
       <div style="background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
         <div style="color:#888;font-size:11px;margin-bottom:4px">Primer gasto</div>
@@ -1185,19 +1187,19 @@ function renderMeses() {
     const esObra = new Date(parseInt(y2), parseInt(mo2)-1, 15) >= INICIO_OBRA;
     return `<div style="background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:10px;
       box-shadow:0 1px 4px rgba(0,0,0,0.06);
-      ${esActual ? "border-left:4px solid #4CAF50;" : ""}">
+      ${esActual ? "border-left:4px solid #8B6F47;" : ""}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
         <div>
           <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-weight:700;font-size:15px;color:#1C2B1E">${nombreMes}</span>
-            ${esActual ? '<span style="background:#4CAF50;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600">MES ACTUAL</span>' : ""}
+            <span style="font-weight:700;font-size:15px;color:#1A1A1A">${nombreMes}</span>
+            ${esActual ? '<span style="background:#8B6F47;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600">MES ACTUAL</span>' : ""}
             ${esObra && !esActual ? '<span style="background:#E8F5E9;color:#2E7D32;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600">🏗️ OBRA</span>' : ""}
           </div>
           <div style="color:#999;font-size:12px;margin-top:2px">${d.count} gasto${d.count!==1?"s":""}</div>
         </div>
         <div style="text-align:right">
-          <div style="font-weight:800;font-size:16px;color:#1C2B1E">${fUSD(d.usd)}</div>
-          <div style="color:#6B8A6E;font-size:12px">${fARS(d.ars)}</div>
+          <div style="font-weight:800;font-size:16px;color:#1A1A1A">${fUSD(d.usd)}</div>
+          <div style="color:#9E8060;font-size:12px">${fARS(d.ars)}</div>
         </div>
       </div>
       <div style="display:grid;gap:4px">
@@ -1302,10 +1304,12 @@ function renderMateriales() {
     const pct = totalUSD > 0 ? (subMap[s].usd/totalUSD*100).toFixed(1) : 0;
     return `<div class="legend-item">
       <div class="legend-dot" style="background:${SUBCAT_COLORES[i%SUBCAT_COLORES.length]}"></div>
-      <div class="legend-name">${s}</div>
+      <div style="flex:1">
+        <div class="legend-name">${s}</div>
+        <div style="font-size:12px;color:#8B6F47;font-weight:700">${pct}%</div>
+      </div>
       <div style="text-align:right">
         <div class="legend-usd">${fUSD(subMap[s].usd)}</div>
-        <div style="font-size:12px;color:#4CAF50;font-weight:700">${pct}%</div>
         <div class="legend-ars">${fARS(subMap[s].ars)}</div>
       </div>
     </div>`;

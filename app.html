@@ -205,6 +205,11 @@
         <div id="m2-ars" style="color:#C4A882;font-size:12px">$ 0/m²</div>
       </div>
     </div>
+    <div style="position:relative;margin-bottom:12px">
+      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none">🔍</span>
+      <input id="buscador" type="search" placeholder="Buscar gasto..." oninput="renderLista()"
+        style="width:100%;padding:9px 12px 9px 36px;border-radius:20px;border:1.5px solid var(--border);background:var(--white);font-size:14px;color:var(--text);outline:none;-webkit-appearance:none">
+    </div>
     <div class="filtros" id="filtros"></div>
     <div id="lista-gastos"></div>
   </div>
@@ -613,6 +618,7 @@ function flash(msg, isErr, duration=4000) {
 // ── Vistas ────────────────────────────────────────────────────────────────────
 function setVista(v) {
   vistaActual = v;
+  if (v !== "lista") limpiarBuscador();
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
   document.querySelectorAll(".nav-btn").forEach((b,i)=>{ b.classList.toggle("active", ["lista","resumen","grafico","evolucion","meses","materiales"][i]===v); });
   document.getElementById("vista-"+v).classList.add("active");
@@ -693,7 +699,11 @@ function renderLista() {
   ).join("");
 
   // Lista
-  const filtrados = filtroCat==="Todas" ? gastos : gastos.filter(g=>g.categoria===filtroCat);
+  const busq = (document.getElementById("buscador")?.value || "").toLowerCase().trim();
+  const filtrados = gastos.filter(g =>
+    (filtroCat==="Todas" || g.categoria===filtroCat) &&
+    (!busq || g.descripcion.toLowerCase().includes(busq))
+  );
   const el = document.getElementById("lista-gastos");
   if (filtrados.length===0) {
     el.innerHTML=`<div class="empty"><div class="icon">🏗️</div><div class="title">No hay gastos todavía</div><div class="sub">Tocá el + para cargar el primero</div></div>`;
@@ -733,6 +743,7 @@ function toggleGasto(id) {
   if (el) el.classList.toggle("open");
 }
 function setFiltro(c) { filtroCat=c; renderLista(); }
+function limpiarBuscador() { const b=document.getElementById("buscador"); if(b) b.value=""; }
 
 // ── Render Resumen ────────────────────────────────────────────────────────────
 function renderResumen() {
